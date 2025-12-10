@@ -1,3 +1,8 @@
+![Zig](https://img.shields.io/badge/Made_with-Zig-orange?logo=zig&style=flat-square)
+![License](https://img.shields.io/github/license/AngelArgumedo/boemia-script?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Development-blue?style=flat-square)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green?style=flat-square)
+
 # Boemia Script
 
 Un lenguaje de programación compilado, con tipos estáticos, diseñado para aprender cómo funcionan los compiladores e intérpretes desde cero.
