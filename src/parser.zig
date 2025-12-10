@@ -168,23 +168,21 @@ pub const Parser = struct {
             self.nextToken(); // consume '}'
             self.nextToken(); // consume 'else'
 
-            if (self.peek_token.type == .IF) {
-                // else if
-                self.nextToken();
+            // After consuming 'else', current_token is at next token (either 'if' or '{')
+            if (self.current_token.type == .IF) {
+                // else if - recursively parse as another if statement
                 const elif_stmt = try self.parseIfStatement();
-                const elif_ptr = try self.allocator.create(Stmt);
-                elif_ptr.* = elif_stmt;
+                // Create a single-element slice and copy the elif statement directly
                 else_block = try self.allocator.alloc(Stmt, 1);
-                else_block.?[0] = elif_ptr.*;
-            } else {
-                // After two nextToken() calls above, current_token is at LBRACE
-                if (self.current_token.type != .LBRACE) {
-                    return ParseError.UnexpectedToken;
-                }
+                else_block.?[0] = elif_stmt;
+            } else if (self.current_token.type == .LBRACE) {
+                // else block
                 self.nextToken(); // consume LBRACE
                 else_block = try self.parseBlock();
                 // After parseBlock, current_token is at RBRACE, consume it
                 self.nextToken(); // consume '}'
+            } else {
+                return ParseError.UnexpectedToken;
             }
         } else {
             self.nextToken(); // consume '}'

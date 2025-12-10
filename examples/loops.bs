@@ -1,5 +1,3 @@
-// loops.bs - Ejemplos de bucles
-
 // While loop
 make counter: int = 0;
 while counter < 5 {
