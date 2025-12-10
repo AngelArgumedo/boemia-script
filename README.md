@@ -33,8 +33,13 @@ Crear un compilador funcional que compile Boemia Script a código nativo, permit
 ## Inicio Rápido
 
 ### Prerrequisitos
-- Zig 0.11 o superior
-- GCC o Clang (para compilar el código C generado)
+
+#### Para uso local:
+- Zig 0.15.2 o superior
+- GCC o Clang (para compilar el código C generado) <- opcional
+
+#### Para uso con contenedores (alternativa):
+- Docker o Podman (no requiere instalar Zig ni GCC localmente)
 
 ### Instalación
 
@@ -46,18 +51,63 @@ cd boemia-script
 # Compilar el compilador
 zig build
 
-# El ejecutable estará en zig-out/bin/boemia-script
+# El ejecutable estará en zig-out/bin/boemia-compiler
 ```
 
 ### Uso
 
+#### Opción 1: Local
+
 ```bash
 # Compilar un programa Boemia Script
-./zig-out/bin/boemia-script examples/hello.bs -o hello
+./zig-out/bin/boemia-compiler examples/hello.bs -o hello
+
+# Ejecutar el programa compilado (se guarda en build/)
+./build/hello
+```
+
+#### Opción 2: Con Docker
+
+```bash
+# Construir la imagen
+make docker-build
+
+# Compilar un programa
+make docker-compile
+
+# O manualmente
+docker run --rm \
+  -v $(pwd)/examples:/workspace/examples:ro \
+  -v $(pwd)/build:/workspace/build \
+  boemia-script:latest \
+  examples/hello.bs -o hello
 
 # Ejecutar el programa
-./hello
+./build/hello
 ```
+
+#### Opción 3: Con Podman
+
+```bash
+# Construir la imagen
+make podman-build
+
+# Compilar un programa
+make podman-compile
+
+# O manualmente
+podman run --rm \
+  -v $(pwd)/examples:/workspace/examples:ro \
+  -v $(pwd)/build:/workspace/build \
+  boemia-script:latest \
+  examples/hello.bs -o hello
+
+# Ejecutar el programa
+./build/hello
+```
+
+> **Nota**: Los programas compilados se guardan automáticamente en la carpeta `build/`.
+> Para más detalles sobre Docker/Podman, consulta [DOCKER.md](DOCKER.md).
 
 ### Tu Primer Programa
 
@@ -74,8 +124,8 @@ print(x);
 Compílalo y ejecútalo:
 
 ```bash
-./zig-out/bin/boemia-script hello.bs -o hello
-./hello
+./zig-out/bin/boemia-compiler hello.bs -o hello
+./build/hello
 ```
 
 ## Características Implementadas
@@ -101,13 +151,13 @@ Compílalo y ejecútalo:
 - **Scope estilo TypeScript**
 
 ### Futura Implementación (v2.0)
-- ⏳ Arrays y colecciones
-- ⏳ Structs/Clases
-- ⏳ Manejo de errores (try/catch)
-- ⏳ Módulos e imports
-- ⏳ Inferencia de tipos
-- ⏳ Genéricos
-- ⏳ Garbage Collection
+- (pendiente) Arrays y colecciones
+- (pendiente) Structs/Clases
+- (pendiente) Manejo de errores (try/catch)
+- (pendiente) Módulos e imports
+- (pendiente) Inferencia de tipos
+- (pendiente) Genéricos
+- (pendiente) Garbage Collection
 
 ## Sintaxis de Boemia Script
 
@@ -349,23 +399,23 @@ graph TD
 Cuando compilas un programa, verás un output detallado de cada fase:
 
 ```
-🚀 Boemia Script Compiler
+Boemia Script Compiler
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📄 Input:  examples/hello.bs
-📦 Output: hello
+Input:  examples/hello.bs
+Output: hello
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔍 Phase 1: Lexical Analysis (Tokenization)
-🌳 Phase 2: Syntax Analysis (Building AST)
+Phase 1: Lexical Analysis (Tokenization)
+Phase 2: Syntax Analysis (Building AST)
    ✓ Successfully parsed 5 statements
-🔬 Phase 3: Semantic Analysis (Type Checking)
+Phase 3: Semantic Analysis (Type Checking)
    ✓ Type checking passed
-⚙️  Phase 4: Code Generation (C Code)
-Successfully compiled to: hello
+Phase 4: Code Generation (C Code)
+Successfully compiled to: build/hello
 
-✅ Compilation successful!
+Compilation successful!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎉 Run your program with: ./hello
+Run your program with: ./build/hello
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -390,7 +440,7 @@ Successfully compiled to: hello
 
 ### Fase 3: Testing y Ejemplos - EN PROGRESO
 - [x] Ejemplos básicos (hello.bs, simple.bs)
-- [ ] Test suite completo
+- [x] Test suite completo
 - [ ] Más programas de ejemplo
 - [ ] Benchmarks de rendimiento
 
@@ -431,6 +481,35 @@ for i: int = 1; i <= 10; i = i + 1 {
     }
     print(i);
 }
+```
+
+## Comandos Disponibles (Makefile)
+
+El proyecto incluye un Makefile con comandos útiles:
+
+```bash
+# Ver todos los comandos disponibles
+make help
+
+# Construcción y pruebas locales
+make build          # Compilar el compilador con Zig
+make test           # Ejecutar suite de tests
+make clean          # Limpiar archivos compilados
+
+# Docker
+make docker-build   # Construir imagen Docker
+make docker-run     # Ejecutar en modo interactivo
+make docker-compile # Compilar ejemplo hello.bs
+
+# Podman
+make podman-build   # Construir imagen Podman
+make podman-run     # Ejecutar en modo interactivo
+make podman-compile # Compilar ejemplo hello.bs
+
+# Docker Compose
+make compose-up     # Iniciar servicio
+make compose-down   # Detener servicio
+make compose-logs   # Ver logs
 ```
 
 ## Detalles Técnicos
