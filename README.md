@@ -2,6 +2,7 @@
 ![License](https://img.shields.io/github/license/AngelArgumedo/boemia-script?style=flat-square)
 ![Status](https://img.shields.io/badge/Status-Development-blue?style=flat-square)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green?style=flat-square)
+![Contributors](https://img.shields.io/github/contributors/AngelArgumedo/boemia-script?style=flat-square)
 
 # Boemia Script
 
