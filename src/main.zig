@@ -42,23 +42,23 @@ pub fn main() !void {
     };
     defer allocator.free(source_code);
 
-    std.debug.print("🚀 Boemia Script Compiler\n", .{});
+    std.debug.print(" Boemia Script Compiler\n", .{});
     std.debug.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", .{});
-    std.debug.print("📄 Input:  {s}\n", .{input_file});
-    std.debug.print("📦 Output: {s}\n", .{output_file});
+    std.debug.print(" Input:  {s}\n", .{input_file});
+    std.debug.print(" Output: {s}\n", .{output_file});
     std.debug.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n", .{});
 
     // Phase 1: Lexical Analysis
-    std.debug.print("🔍 Phase 1: Lexical Analysis (Tokenization)\n", .{});
+    std.debug.print("Phase 1: Lexical Analysis (Tokenization)\n", .{});
     var lexer = Lexer.init(allocator, source_code);
 
     // Phase 2: Syntax Analysis (Parsing)
-    std.debug.print("🌳 Phase 2: Syntax Analysis (Building AST)\n", .{});
+    std.debug.print("Phase 2: Syntax Analysis (Building AST)\n", .{});
     var parser = try Parser.init(allocator, &lexer);
     defer parser.deinit();
 
     var program = parser.parseProgram() catch |err| {
-        std.debug.print("\n❌ Parsing Error:\n", .{});
+        std.debug.print("\n Parsing Error:\n", .{});
         for (parser.errors.items) |error_msg| {
             std.debug.print("  • {s}\n", .{error_msg});
         }
@@ -67,7 +67,7 @@ pub fn main() !void {
     defer program.deinit();
 
     if (parser.errors.items.len > 0) {
-        std.debug.print("\n⚠️  Parsing Warnings:\n", .{});
+        std.debug.print("\n Parsing Warnings:\n", .{});
         for (parser.errors.items) |warning| {
             std.debug.print("  • {s}\n", .{warning});
         }
@@ -76,12 +76,12 @@ pub fn main() !void {
     std.debug.print("   ✓ Successfully parsed {d} statements\n", .{program.statements.len});
 
     // Phase 3: Semantic Analysis
-    std.debug.print("🔬 Phase 3: Semantic Analysis (Type Checking)\n", .{});
+    std.debug.print("Phase 3: Semantic Analysis (Type Checking)\n", .{});
     var analyzer = Analyzer.init(allocator);
     defer analyzer.deinit();
 
     analyzer.analyze(&program) catch |err| {
-        std.debug.print("\n❌ Semantic Analysis Error:\n", .{});
+        std.debug.print("\n Semantic Analysis Error:\n", .{});
         for (analyzer.errors.items) |error_msg| {
             std.debug.print("  • {s}\n", .{error_msg});
         }
@@ -89,7 +89,7 @@ pub fn main() !void {
     };
 
     if (analyzer.errors.items.len > 0) {
-        std.debug.print("\n⚠️  Semantic Analysis Warnings:\n", .{});
+        std.debug.print("\n  Semantic Analysis Warnings:\n", .{});
         for (analyzer.errors.items) |warning| {
             std.debug.print("  • {s}\n", .{warning});
         }
@@ -98,15 +98,15 @@ pub fn main() !void {
     std.debug.print("   ✓ Type checking passed\n", .{});
 
     // Phase 4: Code Generation
-    std.debug.print("⚙️  Phase 4: Code Generation (C Code)\n", .{});
+    std.debug.print("  Phase 4: Code Generation (C Code)\n", .{});
     codegen.compileToExecutable(allocator, &program, output_file) catch |err| {
-        std.debug.print("\n❌ Code Generation Error: {}\n", .{err});
+        std.debug.print("\n Code Generation Error: {}\n", .{err});
         return err;
     };
 
-    std.debug.print("\n✅ Compilation successful!\n", .{});
+    std.debug.print("\n Compilation successful!\n", .{});
     std.debug.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", .{});
-    std.debug.print("🎉 Run your program with: ./{s}\n", .{output_file});
+    std.debug.print(" Run your program with: ./{s}\n", .{output_file});
     std.debug.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", .{});
 }
 
