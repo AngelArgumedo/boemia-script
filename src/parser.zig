@@ -139,7 +139,11 @@ pub const Parser = struct {
 
         const value = try self.parseExpression(0);
 
-        try self.expectToken(.SEMICOLON);
+        // After parseExpression, current_token is at SEMICOLON
+        if (self.current_token.type != .SEMICOLON) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume SEMICOLON
 
         return Stmt{ .assignment = .{
             .name = name,
@@ -152,7 +156,11 @@ pub const Parser = struct {
 
         const condition = try self.parseExpression(0);
 
-        try self.expectToken(.LBRACE);
+        // After parseExpression, current_token is at LBRACE
+        if (self.current_token.type != .LBRACE) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume LBRACE
         const then_block = try self.parseBlock();
 
         var else_block: ?[]Stmt = null;
@@ -169,8 +177,14 @@ pub const Parser = struct {
                 else_block = try self.allocator.alloc(Stmt, 1);
                 else_block.?[0] = elif_ptr.*;
             } else {
-                try self.expectToken(.LBRACE);
+                // After two nextToken() calls above, current_token is at LBRACE
+                if (self.current_token.type != .LBRACE) {
+                    return ParseError.UnexpectedToken;
+                }
+                self.nextToken(); // consume LBRACE
                 else_block = try self.parseBlock();
+                // After parseBlock, current_token is at RBRACE, consume it
+                self.nextToken(); // consume '}'
             }
         } else {
             self.nextToken(); // consume '}'
@@ -191,7 +205,11 @@ pub const Parser = struct {
 
         const condition = try self.parseExpression(0);
 
-        try self.expectToken(.LBRACE);
+        // After parseExpression, current_token is at LBRACE
+        if (self.current_token.type != .LBRACE) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume LBRACE
         const body = try self.parseBlock();
 
         const while_stmt = try self.allocator.create(Stmt.WhileStmt);
@@ -208,19 +226,63 @@ pub const Parser = struct {
     fn parseForStatement(self: *Parser) ParseError!Stmt {
         self.nextToken(); // consume 'for'
 
-        // Parse init
+        // Parse init - special case for variable declaration without 'make'
         const init_stmt = try self.allocator.create(Stmt);
-        init_stmt.* = try self.parseStatement();
+        if (self.current_token.type == .IDENTIFIER and self.peek_token.type == .COLON) {
+            // Variable declaration in for loop: i: int = 0;
+            const name = self.current_token.lexeme;
+            self.nextToken(); // consume identifier
+            self.nextToken(); // consume ':'
+
+            const data_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
+            self.nextToken(); // consume type
+
+            if (self.current_token.type != .ASSIGN) {
+                return ParseError.UnexpectedToken;
+            }
+            self.nextToken(); // consume '='
+
+            const value = try self.parseExpression(0);
+
+            if (self.current_token.type != .SEMICOLON) {
+                return ParseError.UnexpectedToken;
+            }
+            self.nextToken(); // consume ';'
+
+            init_stmt.* = Stmt{ .variable_decl = .{
+                .name = name,
+                .data_type = data_type,
+                .value = value,
+                .is_const = false,
+            } };
+        } else {
+            init_stmt.* = try self.parseStatement();
+        }
 
         // Parse condition
         const condition = try self.parseExpression(0);
-        try self.expectToken(.SEMICOLON);
+        // After parseExpression, current_token is at SEMICOLON
+        if (self.current_token.type != .SEMICOLON) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume SEMICOLON
 
-        // Parse update
+        // Parse update (assignment without semicolon)
         const update_stmt = try self.allocator.create(Stmt);
-        update_stmt.* = try self.parseAssignment();
+        const update_name = self.current_token.lexeme;
+        self.nextToken(); // consume identifier
+        self.nextToken(); // consume '='
+        const update_value = try self.parseExpression(0);
+        update_stmt.* = Stmt{ .assignment = .{
+            .name = update_name,
+            .value = update_value,
+        } };
 
-        try self.expectToken(.LBRACE);
+        // After parseExpression for update, current_token is at LBRACE
+        if (self.current_token.type != .LBRACE) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume LBRACE
         const body = try self.parseBlock();
 
         const for_stmt = try self.allocator.create(Stmt.ForStmt);
@@ -242,9 +304,13 @@ pub const Parser = struct {
         var value: ?Expr = null;
         if (self.current_token.type != .SEMICOLON) {
             value = try self.parseExpression(0);
+            // After parseExpression, current_token is at SEMICOLON
         }
 
-        try self.expectToken(.SEMICOLON);
+        if (self.current_token.type != .SEMICOLON) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume SEMICOLON
 
         const ret_stmt = try self.allocator.create(Stmt.ReturnStmt);
         ret_stmt.* = .{ .value = value };
@@ -345,7 +411,11 @@ pub const Parser = struct {
 
     fn parseExpressionStatement(self: *Parser) ParseError!Stmt {
         const expr = try self.parseExpression(0);
-        try self.expectToken(.SEMICOLON);
+        // After parseExpression, current_token is at SEMICOLON
+        if (self.current_token.type != .SEMICOLON) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume SEMICOLON
         return Stmt{ .expr_stmt = expr };
     }
 

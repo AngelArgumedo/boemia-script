@@ -123,13 +123,49 @@ pub const Analyzer = struct {
                     return AnalyzerError.TypeMismatch;
                 }
 
+                // Save variables declared in then block so we can remove them after
+                var then_vars: std.ArrayList([]const u8) = .empty;
+                defer then_vars.deinit(self.allocator);
+
+                const then_vars_start_count = self.symbol_table.count();
                 for (if_stmt.then_block) |*s| {
                     try self.analyzeStmt(s);
                 }
 
+                // Collect variables declared in then block
+                var it = self.symbol_table.iterator();
+                var count: usize = 0;
+                while (it.next()) |entry| : (count += 1) {
+                    if (count >= then_vars_start_count) {
+                        try then_vars.append(self.allocator, entry.key_ptr.*);
+                    }
+                }
+
+                // Remove then block variables before analyzing else block
+                for (then_vars.items) |var_name| {
+                    _ = self.symbol_table.remove(var_name);
+                }
+
                 if (if_stmt.else_block) |else_block| {
+                    const else_vars_start_count = self.symbol_table.count();
                     for (else_block) |*s| {
                         try self.analyzeStmt(s);
+                    }
+
+                    // Remove else block variables after analyzing
+                    var else_it = self.symbol_table.iterator();
+                    var else_count: usize = 0;
+                    var else_vars: std.ArrayList([]const u8) = .empty;
+                    defer else_vars.deinit(self.allocator);
+
+                    while (else_it.next()) |entry| : (else_count += 1) {
+                        if (else_count >= else_vars_start_count) {
+                            try else_vars.append(self.allocator, entry.key_ptr.*);
+                        }
+                    }
+
+                    for (else_vars.items) |var_name| {
+                        _ = self.symbol_table.remove(var_name);
                     }
                 }
             },

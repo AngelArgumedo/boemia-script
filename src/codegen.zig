@@ -153,8 +153,17 @@ pub const CodeGenerator = struct {
                 }
                 try self.write("; ");
 
-                // Condition
-                try self.generateExpr(&for_stmt.condition);
+                // Condition - generate without outer parentheses
+                switch (for_stmt.condition) {
+                    .binary => |bin| {
+                        try self.generateExpr(&bin.left);
+                        try self.write(" ");
+                        try self.write(self.mapBinaryOp(bin.operator));
+                        try self.write(" ");
+                        try self.generateExpr(&bin.right);
+                    },
+                    else => try self.generateExpr(&for_stmt.condition),
+                }
                 try self.write("; ");
 
                 // Update (inline without semicolon)
