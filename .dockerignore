@@ -27,8 +27,5 @@ LICENSE
 .idea/
 
 # Executables
-hello
-conditionals
-loops
 test_*
 output
