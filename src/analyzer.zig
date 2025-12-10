@@ -150,8 +150,8 @@ pub const Analyzer = struct {
                 }
             },
             .for_stmt => |for_stmt| {
-                if (for_stmt.init) |init| {
-                    try self.analyzeStmt(init);
+                if (for_stmt.init) |init_stmt| {
+                    try self.analyzeStmt(init_stmt);
                 }
 
                 const cond_type = try self.checkExpr(&for_stmt.condition);
@@ -165,8 +165,8 @@ pub const Analyzer = struct {
                     return AnalyzerError.TypeMismatch;
                 }
 
-                if (for_stmt.update) |update| {
-                    try self.analyzeStmt(update);
+                if (for_stmt.update) |update_stmt| {
+                    try self.analyzeStmt(update_stmt);
                 }
 
                 for (for_stmt.body) |*s| {

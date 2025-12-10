@@ -47,16 +47,16 @@ pub const Parser = struct {
     }
 
     fn expectToken(self: *Parser, token_type: TokenType) !void {
-        if (self.peek_token.type != token_type) {
+        self.nextToken(); // Advance first
+        if (self.current_token.type != token_type) {
             const err = try std.fmt.allocPrint(
                 self.allocator,
                 "Expected {s}, got {s} at {}:{}",
-                .{ @tagName(token_type), @tagName(self.peek_token.type), self.peek_token.line, self.peek_token.column },
+                .{ @tagName(token_type), @tagName(self.current_token.type), self.current_token.line, self.current_token.column },
             );
             try self.errors.append(err);
             return ParseError.UnexpectedToken;
         }
-        self.nextToken();
     }
 
     pub fn parseProgram(self: *Parser) !Program {
@@ -108,18 +108,21 @@ pub const Parser = struct {
             return ParseError.UnexpectedToken;
         }
         const name = self.current_token.lexeme;
-        self.nextToken();
 
         try self.expectToken(.COLON);
 
-        const data_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
-        self.nextToken();
+        const data_type = DataType.fromString(self.peek_token.lexeme) orelse return ParseError.InvalidType;
+        self.nextToken(); // move to type token
 
         try self.expectToken(.ASSIGN);
+        self.nextToken(); // move to expression start
 
         const value = try self.parseExpression(0);
 
-        try self.expectToken(.SEMICOLON);
+        if (self.current_token.type != .SEMICOLON) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume semicolon
 
         return Stmt{ .variable_decl = .{
             .name = name,
@@ -206,25 +209,25 @@ pub const Parser = struct {
         self.nextToken(); // consume 'for'
 
         // Parse init
-        const init = try self.allocator.create(Stmt);
-        init.* = try self.parseStatement();
+        const init_stmt = try self.allocator.create(Stmt);
+        init_stmt.* = try self.parseStatement();
 
         // Parse condition
         const condition = try self.parseExpression(0);
         try self.expectToken(.SEMICOLON);
 
         // Parse update
-        const update = try self.allocator.create(Stmt);
-        update.* = try self.parseAssignment();
+        const update_stmt = try self.allocator.create(Stmt);
+        update_stmt.* = try self.parseAssignment();
 
         try self.expectToken(.LBRACE);
         const body = try self.parseBlock();
 
         const for_stmt = try self.allocator.create(Stmt.ForStmt);
         for_stmt.* = .{
-            .init = init,
+            .init = init_stmt,
             .condition = condition,
-            .update = update,
+            .update = update_stmt,
             .body = body,
         };
 
@@ -250,12 +253,20 @@ pub const Parser = struct {
     }
 
     fn parsePrintStatement(self: *Parser) ParseError!Stmt {
-        self.nextToken(); // consume 'print'
-
         try self.expectToken(.LPAREN);
+        self.nextToken(); // move to expression
+
         const expr = try self.parseExpression(0);
-        try self.expectToken(.RPAREN);
-        try self.expectToken(.SEMICOLON);
+
+        if (self.current_token.type != .RPAREN) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume )
+
+        if (self.current_token.type != .SEMICOLON) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume semicolon
 
         return Stmt{ .print_stmt = expr };
     }

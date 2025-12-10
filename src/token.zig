@@ -130,7 +130,7 @@ pub const Token = struct {
 // Esto nos permite distinguir entre:
 // - "make" -> palabra reservada MAKE
 // - "miVariable" -> identificador IDENTIFIER
-pub const keywords = std.ComptimeStringMap(TokenType, .{
+pub const keywords = std.StaticStringMap(TokenType).initComptime(.{
     // Palabras reservadas para declaraciones
     .{ "make", .MAKE },
     .{ "seal", .SEAL },
