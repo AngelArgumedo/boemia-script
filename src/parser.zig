@@ -30,7 +30,7 @@ pub const Parser = struct {
             .current_token = undefined,
             .peek_token = undefined,
             .allocator = allocator,
-            .errors = std.ArrayList([]const u8).init(allocator),
+            .errors = .empty,
         };
         parser.nextToken();
         parser.nextToken();
@@ -38,7 +38,7 @@ pub const Parser = struct {
     }
 
     pub fn deinit(self: *Parser) void {
-        self.errors.deinit();
+        self.errors.deinit(self.allocator);
     }
 
     fn nextToken(self: *Parser) void {
@@ -47,21 +47,21 @@ pub const Parser = struct {
     }
 
     fn expectToken(self: *Parser, token_type: TokenType) !void {
-        self.nextToken(); // Advance first
-        if (self.current_token.type != token_type) {
+        if (self.peek_token.type != token_type) {
             const err = try std.fmt.allocPrint(
                 self.allocator,
                 "Expected {s}, got {s} at {}:{}",
-                .{ @tagName(token_type), @tagName(self.current_token.type), self.current_token.line, self.current_token.column },
+                .{ @tagName(token_type), @tagName(self.peek_token.type), self.peek_token.line, self.peek_token.column },
             );
-            try self.errors.append(err);
+            try self.errors.append(self.allocator, err);
             return ParseError.UnexpectedToken;
         }
+        self.nextToken(); // Advance after checking
     }
 
     pub fn parseProgram(self: *Parser) !Program {
-        var statements = std.ArrayList(Stmt).init(self.allocator);
-        errdefer statements.deinit();
+        var statements: std.ArrayList(Stmt) = .empty;
+        errdefer statements.deinit(self.allocator);
 
         while (self.current_token.type != .EOF) {
             const stmt = self.parseStatement() catch |err| {
@@ -74,10 +74,10 @@ pub const Parser = struct {
                 }
                 return err;
             };
-            try statements.append(stmt);
+            try statements.append(self.allocator, stmt);
         }
 
-        return Program.init(self.allocator, try statements.toOwnedSlice());
+        return Program.init(self.allocator, try statements.toOwnedSlice(self.allocator));
     }
 
     fn parseStatement(self: *Parser) ParseError!Stmt {
@@ -278,29 +278,27 @@ pub const Parser = struct {
             return ParseError.UnexpectedToken;
         }
         const name = self.current_token.lexeme;
-        self.nextToken();
 
-        try self.expectToken(.LPAREN);
+        try self.expectToken(.LPAREN); // verifies peek is LPAREN, then advances
 
-        var params = std.ArrayList(Stmt.Parameter).init(self.allocator);
-        defer params.deinit();
+        var params: std.ArrayList(Stmt.Parameter) = .empty;
+        defer params.deinit(self.allocator);
 
         while (self.current_token.type != .RPAREN) {
             if (self.current_token.type != .IDENTIFIER) {
                 return ParseError.UnexpectedToken;
             }
             const param_name = self.current_token.lexeme;
-            self.nextToken();
 
-            try self.expectToken(.COLON);
+            try self.expectToken(.COLON); // verifies peek is COLON, then advances
 
             const param_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
-            self.nextToken();
+            self.nextToken(); // move past type
 
-            try params.append(.{ .name = param_name, .data_type = param_type });
+            try params.append(self.allocator, .{ .name = param_name, .data_type = param_type });
 
             if (self.current_token.type == .COMMA) {
-                self.nextToken();
+                self.nextToken(); // consume comma
             }
         }
 
@@ -316,7 +314,7 @@ pub const Parser = struct {
         const func_decl = try self.allocator.create(Stmt.FunctionDecl);
         func_decl.* = .{
             .name = name,
-            .params = try params.toOwnedSlice(),
+            .params = try params.toOwnedSlice(self.allocator),
             .return_type = return_type,
             .body = body,
         };
@@ -334,15 +332,15 @@ pub const Parser = struct {
     }
 
     fn parseBlock(self: *Parser) ParseError![]Stmt {
-        var statements = std.ArrayList(Stmt).init(self.allocator);
-        errdefer statements.deinit();
+        var statements: std.ArrayList(Stmt) = .empty;
+        errdefer statements.deinit(self.allocator);
 
         while (self.current_token.type != .RBRACE and self.current_token.type != .EOF) {
             const stmt = try self.parseStatement();
-            try statements.append(stmt);
+            try statements.append(self.allocator, stmt);
         }
 
-        return statements.toOwnedSlice();
+        return statements.toOwnedSlice(self.allocator);
     }
 
     fn parseExpressionStatement(self: *Parser) ParseError!Stmt {
@@ -406,12 +404,12 @@ pub const Parser = struct {
                 // Check for function call
                 if (self.current_token.type == .LPAREN) {
                     self.nextToken();
-                    var args = std.ArrayList(Expr).init(self.allocator);
-                    defer args.deinit();
+                    var args: std.ArrayList(Expr) = .empty;
+                    defer args.deinit(self.allocator);
 
                     while (self.current_token.type != .RPAREN) {
                         const arg = try self.parseExpression(0);
-                        try args.append(arg);
+                        try args.append(self.allocator, arg);
 
                         if (self.current_token.type == .COMMA) {
                             self.nextToken();
@@ -423,7 +421,7 @@ pub const Parser = struct {
                     const call = try self.allocator.create(Expr.CallExpr);
                     call.* = .{
                         .name = name,
-                        .args = try args.toOwnedSlice(),
+                        .args = try args.toOwnedSlice(self.allocator),
                     };
                     break :blk Expr{ .call = call };
                 }

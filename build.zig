@@ -7,9 +7,11 @@ pub fn build(b: *std.Build) void {
     // Create the boemia-compiler executable
     const exe = b.addExecutable(.{
         .name = "boemia-compiler",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     // Install the executable
@@ -29,9 +31,11 @@ pub fn build(b: *std.Build) void {
 
     // Create test executable for unit tests
     const unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);

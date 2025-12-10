@@ -29,7 +29,7 @@ pub const Analyzer = struct {
         return Analyzer{
             .allocator = allocator,
             .symbol_table = std.StringHashMap(Symbol).init(allocator),
-            .errors = std.ArrayList([]const u8).init(allocator),
+            .errors = .empty,
         };
     }
 
@@ -38,7 +38,7 @@ pub const Analyzer = struct {
         for (self.errors.items) |err| {
             self.allocator.free(err);
         }
-        self.errors.deinit();
+        self.errors.deinit(self.allocator);
     }
 
     pub fn analyze(self: *Analyzer, program: *Program) !void {
@@ -57,7 +57,7 @@ pub const Analyzer = struct {
                         "Variable '{s}' is already declared",
                         .{decl.name},
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.RedeclaredVariable;
                 }
 
@@ -70,7 +70,7 @@ pub const Analyzer = struct {
                         "Type mismatch: cannot assign {s} to {s}",
                         .{ expr_type.toString(), decl.data_type.toString() },
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
                 }
 
@@ -86,7 +86,7 @@ pub const Analyzer = struct {
                         "Undefined variable '{s}'",
                         .{assign.name},
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.UndefinedVariable;
                 };
 
@@ -96,7 +96,7 @@ pub const Analyzer = struct {
                         "Cannot assign to constant '{s}'",
                         .{assign.name},
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.ConstantAssignment;
                 }
 
@@ -107,7 +107,7 @@ pub const Analyzer = struct {
                         "Type mismatch: cannot assign {s} to {s}",
                         .{ expr_type.toString(), symbol.data_type.toString() },
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
                 }
             },
@@ -119,7 +119,7 @@ pub const Analyzer = struct {
                         "If condition must be bool, got {s}",
                         .{cond_type.toString()},
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
                 }
 
@@ -141,7 +141,7 @@ pub const Analyzer = struct {
                         "While condition must be bool, got {s}",
                         .{cond_type.toString()},
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
                 }
 
@@ -161,7 +161,7 @@ pub const Analyzer = struct {
                         "For condition must be bool, got {s}",
                         .{cond_type.toString()},
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
                 }
 
@@ -218,7 +218,7 @@ pub const Analyzer = struct {
                         "Undefined variable '{s}'",
                         .{name},
                     );
-                    try self.errors.append(err);
+                    try self.errors.append(self.allocator, err);
                     return AnalyzerError.UndefinedVariable;
                 };
                 break :blk symbol.data_type;
@@ -247,7 +247,7 @@ pub const Analyzer = struct {
                                 "Invalid operation: {s} {s} {s}",
                                 .{ left_type.toString(), @tagName(bin.operator), right_type.toString() },
                             );
-                            try self.errors.append(err);
+                            try self.errors.append(self.allocator, err);
                             return AnalyzerError.InvalidOperation;
                         }
                     },
@@ -259,7 +259,7 @@ pub const Analyzer = struct {
                                 "Cannot compare {s} with {s}",
                                 .{ left_type.toString(), right_type.toString() },
                             );
-                            try self.errors.append(err);
+                            try self.errors.append(self.allocator, err);
                             return AnalyzerError.TypeMismatch;
                         }
                         break :blk .BOOL;

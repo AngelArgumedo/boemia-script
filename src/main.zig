@@ -111,8 +111,7 @@ pub fn main() !void {
 }
 
 fn printUsage() !void {
-    const stdout = std.io.getStdOut().writer();
-    try stdout.writeAll(
+    std.debug.print(
         \\
         \\Boemia Script Compiler
         \\
@@ -128,5 +127,5 @@ fn printUsage() !void {
         \\  boemia-compiler examples/factorial.bs -o factorial
         \\
         \\
-    );
+    , .{});
 }

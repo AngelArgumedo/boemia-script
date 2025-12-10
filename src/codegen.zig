@@ -19,19 +19,22 @@ pub const CodeGenerator = struct {
     output: std.ArrayList(u8),
     indent_level: usize,
     string_literals: std.ArrayList([]const u8),
+    variable_types: std.StringHashMap(DataType),
 
     pub fn init(allocator: std.mem.Allocator) CodeGenerator {
         return CodeGenerator{
             .allocator = allocator,
-            .output = std.ArrayList(u8).init(allocator),
+            .output = .empty,
             .indent_level = 0,
-            .string_literals = std.ArrayList([]const u8).init(allocator),
+            .string_literals = .empty,
+            .variable_types = std.StringHashMap(DataType).init(allocator),
         };
     }
 
     pub fn deinit(self: *CodeGenerator) void {
-        self.output.deinit();
-        self.string_literals.deinit();
+        self.output.deinit(self.allocator);
+        self.string_literals.deinit(self.allocator);
+        self.variable_types.deinit();
     }
 
     pub fn generate(self: *CodeGenerator, program: *Program) ![]const u8 {
@@ -53,7 +56,7 @@ pub const CodeGenerator = struct {
         self.indent_level -= 1;
         try self.write("}\n");
 
-        return self.output.toOwnedSlice();
+        return self.output.toOwnedSlice(self.allocator);
     }
 
     fn writeHeaders(self: *CodeGenerator) !void {
@@ -68,6 +71,9 @@ pub const CodeGenerator = struct {
     fn generateStmt(self: *CodeGenerator, stmt: *const Stmt) CodeGenError!void {
         switch (stmt.*) {
             .variable_decl => |decl| {
+                // Track variable type for later use
+                self.variable_types.put(decl.name, decl.data_type) catch return CodeGenError.OutOfMemory;
+
                 try self.writeIndent();
 
                 // Write type (const if sealed)
@@ -285,11 +291,36 @@ pub const CodeGenerator = struct {
                 try self.generateExpr(expr);
                 try self.write(" ? \"true\" : \"false\"");
             },
-            .identifier => {
-                // For identifiers, we'll assume they're integers for now
-                // A more robust solution would track variable types
-                try self.write("\"%lld\\n\", (long long)");
-                try self.generateExpr(expr);
+            .identifier => |name| {
+                // Look up the variable type from our symbol table
+                if (self.variable_types.get(name)) |var_type| {
+                    switch (var_type) {
+                        .INT => {
+                            try self.write("\"%lld\\n\", (long long)");
+                            try self.generateExpr(expr);
+                        },
+                        .FLOAT => {
+                            try self.write("\"%f\\n\", (double)");
+                            try self.generateExpr(expr);
+                        },
+                        .STRING => {
+                            try self.write("\"%s\\n\", ");
+                            try self.generateExpr(expr);
+                        },
+                        .BOOL => {
+                            try self.write("\"%s\\n\", ");
+                            try self.generateExpr(expr);
+                            try self.write(" ? \"true\" : \"false\"");
+                        },
+                        .VOID => {
+                            try self.write("\"%s\\n\", \"void\"");
+                        },
+                    }
+                } else {
+                    // Fallback: assume integer if we don't know the type
+                    try self.write("\"%lld\\n\", (long long)");
+                    try self.generateExpr(expr);
+                }
             },
             else => {
                 // For complex expressions, try to print as integer
@@ -337,7 +368,7 @@ pub const CodeGenerator = struct {
     }
 
     fn write(self: *CodeGenerator, str: []const u8) CodeGenError!void {
-        self.output.appendSlice(str) catch return CodeGenError.WriteError;
+        self.output.appendSlice(self.allocator, str) catch return CodeGenError.WriteError;
     }
 
     fn writeIndent(self: *CodeGenerator) CodeGenError!void {

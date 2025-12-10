@@ -1,0 +1,16 @@
+// types.bs - Ejemplo de todos los tipos de datos
+
+make numero: int = 42;
+print(numero);
+
+make pi: float = 3.14159;
+print(pi);
+
+make mensaje: string = "Boemia Script funciona!";
+print(mensaje);
+
+make activo: bool = true;
+print(activo);
+
+make suma: int = 10 + 32;
+print(suma);
