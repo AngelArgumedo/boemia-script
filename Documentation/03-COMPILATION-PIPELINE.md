@@ -1,0 +1,485 @@
+# Pipeline de Compilacion
+
+## Introduccion
+
+El pipeline de compilacion de Boemia Script es el proceso completo que transforma el codigo fuente en un ejecutable nativo. Este documento describe cada fase en detalle, mostrando como los datos fluyen a traves del compilador.
+
+## Vision General del Pipeline
+
+```mermaid
+graph TB
+    subgraph Input["Entrada"]
+        A[archivo.bs<br/>Codigo Fuente]
+    end
+
+    subgraph Phase1["Fase 1: Analisis Lexico"]
+        B[Lexer]
+        C[Stream de Tokens]
+    end
+
+    subgraph Phase2["Fase 2: Analisis Sintactico"]
+        D[Parser]
+        E[AST - Abstract Syntax Tree]
+    end
+
+    subgraph Phase3["Fase 3: Analisis Semantico"]
+        F[Analyzer]
+        G[AST Validado + Symbol Table]
+    end
+
+    subgraph Phase4["Fase 4: Generacion de Codigo"]
+        H[Code Generator]
+        I[archivo.c<br/>Codigo C]
+    end
+
+    subgraph Phase5["Fase 5: Compilacion Nativa"]
+        J[GCC/Clang]
+        K[archivo.o<br/>Objeto]
+        L[Linker]
+    end
+
+    subgraph Output["Salida"]
+        M[ejecutable<br/>Binario Nativo]
+    end
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+
+    style Input fill:#e3f2fd
+    style Phase1 fill:#fff3e0
+    style Phase2 fill:#f3e5f5
+    style Phase3 fill:#e8f5e9
+    style Phase4 fill:#fff9c4
+    style Phase5 fill:#ffccbc
+    style Output fill:#c8e6c9
+```
+
+## Fase 1: Analisis Lexico (Lexer)
+
+### Objetivo
+Convertir el codigo fuente (secuencia de caracteres) en una secuencia de tokens.
+
+### Entrada
+```boemia
+make x: int = 42;
+```
+
+### Proceso
+```mermaid
+flowchart LR
+    A[Caracteres:<br/>m,a,k,e, ,x,:, ,i,n,t,=,4,2,;] --> B[Lexer]
+    B --> C[Tokens]
+```
+
+### Salida
+```
+Token(MAKE, "make", 1:1)
+Token(IDENTIFIER, "x", 1:6)
+Token(COLON, ":", 1:7)
+Token(TYPE_INT, "int", 1:9)
+Token(ASSIGN, "=", 1:13)
+Token(INTEGER, "42", 1:15)
+Token(SEMICOLON, ";", 1:17)
+```
+
+### Transformacion de Datos
+
+| Antes | Despues |
+|-------|---------|
+| String de caracteres | Lista de tokens |
+| No estructurado | Estructurado |
+| Sin clasificacion | Clasificado por tipo |
+
+## Fase 2: Analisis Sintactico (Parser)
+
+### Objetivo
+Construir el Abstract Syntax Tree (AST) a partir de los tokens.
+
+### Entrada
+```
+[MAKE] [IDENTIFIER "x"] [COLON] [TYPE_INT] [ASSIGN] [INTEGER "42"] [SEMICOLON]
+```
+
+### Proceso
+```mermaid
+graph TD
+    A[Lista de Tokens] --> B[Parser]
+    B --> C{Reconocer Patron}
+    C --> D[make + identifier + : + type + = + expr]
+    D --> E[Construir Nodo AST]
+    E --> F[VariableDecl Node]
+```
+
+### Salida (AST)
+```
+Program
+└── VariableDecl
+    ├── name: "x"
+    ├── type: INT
+    ├── is_const: false
+    └── value: Integer(42)
+```
+
+### Arbol Sintactico Visual
+
+```mermaid
+graph TD
+    A[Program] --> B[Statement: VariableDecl]
+    B --> C[name: x]
+    B --> D[type: INT]
+    B --> E[is_const: false]
+    B --> F[value]
+    F --> G[Expr: Integer]
+    G --> H[42]
+
+    style A fill:#4a90e2
+    style B fill:#7ed321
+    style G fill:#f5a623
+```
+
+## Fase 3: Analisis Semantico (Analyzer)
+
+### Objetivo
+Verificar la correccion semantica del programa (tipos, variables, reglas del lenguaje).
+
+### Entrada
+```
+AST (sin validar)
+```
+
+### Proceso
+```mermaid
+flowchart TD
+    A[AST] --> B[Analyzer]
+    B --> C[Verificar Tipos]
+    B --> D[Verificar Variables]
+    B --> E[Verificar Constantes]
+
+    C --> F{Tipos Compatibles?}
+    D --> G{Variable Definida?}
+    E --> H{Asignacion a Const?}
+
+    F -->|No| I[ERROR: Type Mismatch]
+    F -->|Si| J[OK]
+    G -->|No| K[ERROR: Undefined Variable]
+    G -->|Si| J
+    H -->|Si| L[ERROR: Const Assignment]
+    H -->|No| J
+
+    J --> M[AST Validado + Symbol Table]
+
+    style I fill:#d0021b
+    style K fill:#d0021b
+    style L fill:#d0021b
+    style M fill:#7ed321
+```
+
+### Salida
+```
+AST (validado) + Symbol Table:
+{
+  "x": { type: INT, is_const: false }
+}
+```
+
+### Verificaciones Realizadas
+
+| Verificacion | Ejemplo | Resultado |
+|--------------|---------|-----------|
+| Tipo compatible | `make x: int = 42;` | OK |
+| Tipo incompatible | `make x: int = "hola";` | ERROR |
+| Variable definida | `print(x);` despues de declarar x | OK |
+| Variable no definida | `print(y);` sin declarar y | ERROR |
+| Asignar a const | `seal PI = 3.14; PI = 2;` | ERROR |
+
+## Fase 4: Generacion de Codigo (Code Generator)
+
+### Objetivo
+Convertir el AST validado en codigo C.
+
+### Entrada
+```
+AST Validado
+```
+
+### Proceso
+```mermaid
+flowchart LR
+    A[AST Node] --> B{Tipo de Nodo?}
+    B -->|VariableDecl| C[Generar declaracion C]
+    B -->|IfStmt| D[Generar if C]
+    B -->|WhileStmt| E[Generar while C]
+    B -->|ForStmt| F[Generar for C]
+    B -->|Expr| G[Generar expresion C]
+
+    C --> H[Codigo C]
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+```
+
+### Salida (Codigo C)
+```c
+// Generated by Boemia Script Compiler
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+int main(void) {
+    long long x = 42;
+    return 0;
+}
+```
+
+### Mapeo de Tipos
+
+```mermaid
+graph LR
+    A[Boemia Script] --> B[C]
+
+    C[int] --> D[long long]
+    E[float] --> F[double]
+    G[string] --> H[char*]
+    I[bool] --> J[bool]
+
+    style A fill:#4a90e2
+    style B fill:#7ed321
+```
+
+## Fase 5: Compilacion Nativa (GCC)
+
+### Objetivo
+Compilar el codigo C a codigo maquina ejecutable.
+
+### Entrada
+```c
+archivo.c (codigo C generado)
+```
+
+### Proceso
+```mermaid
+flowchart TD
+    A[archivo.c] --> B[Preprocesador GCC]
+    B --> C[archivo.i<br/>C expandido]
+    C --> D[Compilador GCC]
+    D --> E[archivo.s<br/>Assembly]
+    E --> F[Ensamblador]
+    F --> G[archivo.o<br/>Objeto]
+    G --> H[Linker]
+    H --> I[Ejecutable Final]
+
+    style A fill:#e3f2fd
+    style I fill:#c8e6c9
+```
+
+### Comando Ejecutado
+```bash
+gcc -o build/ejecutable build/ejecutable.c -std=c11 -Wall -Wextra
+```
+
+### Salida
+```
+Ejecutable binario nativo (ELF en Linux, Mach-O en macOS, PE en Windows)
+```
+
+## Flujo Completo de Datos
+
+### Ejemplo Completo
+
+**Codigo Fuente (hello.bs)**:
+```boemia
+make x: int = 10;
+if x > 5 {
+    print(x);
+}
+```
+
+**Transformacion Paso a Paso**:
+
+```mermaid
+sequenceDiagram
+    participant S as Source
+    participant L as Lexer
+    participant P as Parser
+    participant A as Analyzer
+    participant C as CodeGen
+    participant G as GCC
+    participant E as Executable
+
+    S->>L: make x: int = 10; if x > 5 { print(x); }
+
+    L->>L: Tokenizar
+    L->>P: [MAKE, IDENTIFIER(x), COLON, TYPE_INT, ...]
+
+    P->>P: Construir AST
+    P->>A: Program { VariableDecl, IfStmt }
+
+    A->>A: Verificar tipos y variables
+    A->>C: AST Validado + SymbolTable
+
+    C->>C: Generar codigo C
+    C->>G: long long x = 10; if (x > 5) { ... }
+
+    G->>G: Compilar a binario
+    G->>E: Ejecutable nativo
+
+    E-->>S: Programa listo para ejecutar
+```
+
+## Tiempo de Ejecucion de Cada Fase
+
+```mermaid
+gantt
+    title Pipeline de Compilacion - Tiempo Relativo
+    dateFormat X
+    axisFormat %s
+
+    section Fases
+    Lexer           :0, 1
+    Parser          :1, 3
+    Analyzer        :3, 5
+    Code Generator  :5, 7
+    GCC             :7, 20
+```
+
+**Nota**: GCC consume la mayor parte del tiempo de compilacion.
+
+## Manejo de Errores en el Pipeline
+
+```mermaid
+flowchart TD
+    A[Inicio Compilacion] --> B[Fase 1: Lexer]
+    B --> C{Error Lexico?}
+    C -->|Si| D[Reportar y Terminar]
+    C -->|No| E[Fase 2: Parser]
+
+    E --> F{Error Sintactico?}
+    F -->|Si| G[Reportar y Terminar]
+    F -->|No| H[Fase 3: Analyzer]
+
+    H --> I{Error Semantico?}
+    I -->|Si| J[Reportar y Terminar]
+    I -->|No| K[Fase 4: CodeGen]
+
+    K --> L{Error Generacion?}
+    L -->|Si| M[Reportar y Terminar]
+    L -->|No| N[Fase 5: GCC]
+
+    N --> O{Error Compilacion C?}
+    O -->|Si| P[Reportar y Terminar]
+    O -->|No| Q[Exito]
+
+    style D fill:#d0021b
+    style G fill:#d0021b
+    style J fill:#d0021b
+    style M fill:#d0021b
+    style P fill:#d0021b
+    style Q fill:#7ed321
+```
+
+## Optimizaciones del Pipeline
+
+### Single Pass Compilation
+
+Boemia Script usa compilacion de un solo paso:
+
+```mermaid
+graph LR
+    A[Codigo Fuente] --> B[Una Pasada]
+    B --> C[Ejecutable]
+
+    style B fill:#7ed321
+```
+
+**Ventajas**:
+- Compilacion rapida
+- Menor uso de memoria
+- Codigo mas simple
+
+**Desventajas**:
+- Menos optimizaciones posibles
+- Declaraciones forward limitadas
+
+### Lazy Evaluation
+
+```mermaid
+flowchart LR
+    A[Token] -->|Solo cuando se necesita| B[Parser]
+    B -->|Solo cuando se necesita| C[Siguiente Token]
+```
+
+El Lexer genera tokens bajo demanda, no todos de una vez.
+
+## Representaciones Intermedias
+
+```mermaid
+graph TB
+    A[Codigo Fuente] --> B[Texto Plano]
+    B --> C[Lista de Tokens]
+    C --> D[AST]
+    D --> E[AST Validado]
+    E --> F[Codigo C]
+    F --> G[AST de C - GCC]
+    G --> H[Assembly]
+    H --> I[Codigo Maquina]
+
+    style A fill:#e3f2fd
+    style D fill:#f3e5f5
+    style F fill:#fff9c4
+    style I fill:#c8e6c9
+```
+
+## Metadata Preservada en el Pipeline
+
+| Fase | Metadata |
+|------|----------|
+| Lexer | Linea, Columna |
+| Parser | Tipos de nodos, Estructura |
+| Analyzer | Symbol Table, Tipos inferidos |
+| CodeGen | Ninguna (se descarta) |
+
+## Paralelizacion (Futuro)
+
+Actualmente el pipeline es secuencial, pero podria paralelizarse:
+
+```mermaid
+graph TB
+    A[Archivo 1] --> B[Lexer 1]
+    C[Archivo 2] --> D[Lexer 2]
+    E[Archivo 3] --> F[Lexer 3]
+
+    B --> G[Parser 1]
+    D --> H[Parser 2]
+    F --> I[Parser 3]
+
+    G --> J[Merge ASTs]
+    H --> J
+    I --> J
+
+    J --> K[Analyzer Global]
+    K --> L[CodeGen]
+
+    style J fill:#f5a623
+    style K fill:#7ed321
+```
+
+## Proximos Pasos
+
+Para profundizar en cada fase:
+- [Lexer](04-LEXER.md)
+- [Parser](05-PARSER.md)
+- [Analyzer](06-ANALYZER.md)
+- [Code Generator](07-CODEGEN.md)
+- [GCC Integration](08-GCC-INTEGRATION.md)
