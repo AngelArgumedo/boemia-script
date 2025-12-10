@@ -401,13 +401,24 @@ pub fn compileToExecutable(
     const c_code = try codegen.generate(program);
     defer allocator.free(c_code);
 
-    // Write C code to temporary file
-    const c_file_path = try std.fmt.allocPrint(allocator, "{s}.c", .{output_path});
+    // Create build directory if it doesn't exist
+    std.fs.cwd().makeDir("build") catch |err| {
+        if (err != error.PathAlreadyExists) {
+            return err;
+        }
+    };
+
+    // Write C code to file in build directory
+    const c_file_path = try std.fmt.allocPrint(allocator, "build/{s}.c", .{output_path});
     defer allocator.free(c_file_path);
 
     const c_file = try std.fs.cwd().createFile(c_file_path, .{});
     defer c_file.close();
     try c_file.writeAll(c_code);
+
+    // Prepare output executable path in build directory
+    const exec_output_path = try std.fmt.allocPrint(allocator, "build/{s}", .{output_path});
+    defer allocator.free(exec_output_path);
 
     // Compile with GCC
     const result = try std.process.Child.run(.{
@@ -415,7 +426,7 @@ pub fn compileToExecutable(
         .argv = &[_][]const u8{
             "gcc",
             "-o",
-            output_path,
+            exec_output_path,
             c_file_path,
             "-std=c11",
             "-Wall",
@@ -430,5 +441,5 @@ pub fn compileToExecutable(
         return error.CompilationFailed;
     }
 
-    std.debug.print("Successfully compiled to: {s}\n", .{output_path});
+    std.debug.print("Successfully compiled to: {s}\n", .{exec_output_path});
 }

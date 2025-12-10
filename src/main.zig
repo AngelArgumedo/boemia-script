@@ -98,7 +98,7 @@ pub fn main() !void {
     std.debug.print("   ✓ Type checking passed\n", .{});
 
     // Phase 4: Code Generation
-    std.debug.print("  Phase 4: Code Generation (C Code)\n", .{});
+    std.debug.print("Phase 4: Code Generation (C Code)\n", .{});
     codegen.compileToExecutable(allocator, &program, output_file) catch |err| {
         std.debug.print("\n Code Generation Error: {}\n", .{err});
         return err;
@@ -106,7 +106,7 @@ pub fn main() !void {
 
     std.debug.print("\n Compilation successful!\n", .{});
     std.debug.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", .{});
-    std.debug.print(" Run your program with: ./{s}\n", .{output_file});
+    std.debug.print(" Run your program with: ./build/{s}\n", .{output_file});
     std.debug.print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n", .{});
 }
 
