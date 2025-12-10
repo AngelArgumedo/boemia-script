@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  boemia-compiler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: boemia-script:latest
+    container_name: boemia-compiler
+    volumes:
+      # Mount current directory to /workspace for easy access to .bs files
+      - ./examples:/workspace/examples:ro
+      # Mount build directory to persist compiled programs
+      - ./build:/workspace/build
+    # Override entrypoint to keep container running
+    # entrypoint: ["tail", "-f", "/dev/null"]
+    # Or use it interactively
+    stdin_open: true
+    tty: true

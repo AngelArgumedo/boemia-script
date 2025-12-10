@@ -1,0 +1,34 @@
+# Git files
+.git
+.gitignore
+
+# Build artifacts
+zig-out/
+.zig-cache/
+build/
+
+# Examples and tests
+examples/
+tests/
+
+# Documentation
+README.md
+LICENSE
+
+# Temporary files
+*.c
+*.o
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+
+# Executables
+hello
+conditionals
+loops
+test_*
+output
