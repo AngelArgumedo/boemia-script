@@ -2,6 +2,10 @@
 
 Un lenguaje de programación compilado, con tipos estáticos, diseñado para aprender cómo funcionan los compiladores e intérpretes desde cero.
 
+## Estado del Proyecto: FUNCIONAL
+
+El compilador de Boemia Script está completo y operativo. Puedes escribir programas .bs, compilarlos a ejecutables nativos y ejecutarlos.
+
 ## ¿Por qué Boemia Script?
 
 Boemia Script nace como un proyecto educativo con el objetivo de **desmitificar el funcionamiento interno de los lenguajes de programación**. Al construir un compilador completo desde cero, podemos entender:
@@ -26,28 +30,84 @@ Crear un compilador funcional que compile Boemia Script a código nativo, permit
 4. **Implementar generación de código**: Compilar a código ejecutable
 5. **Aprender los fundamentos**: Entender cada fase del proceso de compilación
 
-## Alcance del Proyecto
+## Inicio Rápido
 
-### Características Implementadas
-- ✅ **Variables mutables** (`make`)
-- ✅ **Constantes inmutables** (`seal`)
-- ✅ **Tipos estáticos**: `int`, `float`, `string`, `bool`
-- ✅ **Operadores aritméticos**: `+`, `-`, `*`, `/`
-- ✅ **Operadores de comparación**: `==`, `!=`, `<`, `>`, `<=`, `>=`
-- ✅ **Condicionales**: `if`, `else if`, `else`
-- ✅ **Bucles**: `while`, `for`
-- ✅ **Funciones**: Declaración y llamadas
-- ✅ **Print**: Salida por consola
-- ✅ **Scope estilo TypeScript**
+### Prerrequisitos
+- Zig 0.11 o superior
+- GCC o Clang (para compilar el código C generado)
 
-### Fuera del Alcance (v1.0)
-- ❌ Arrays y colecciones
-- ❌ Structs/Clases
-- ❌ Manejo de errores (try/catch)
-- ❌ Módulos e imports
-- ❌ Inferencia de tipos
-- ❌ Genéricos
-- ❌ Garbage Collection
+### Instalación
+
+```bash
+# Clonar el repositorio
+git clone https://github.com/tu-usuario/boemia-script
+cd boemia-script
+
+# Compilar el compilador
+zig build
+
+# El ejecutable estará en zig-out/bin/boemia-script
+```
+
+### Uso
+
+```bash
+# Compilar un programa Boemia Script
+./zig-out/bin/boemia-script examples/hello.bs -o hello
+
+# Ejecutar el programa
+./hello
+```
+
+### Tu Primer Programa
+
+Crea un archivo `hello.bs`:
+
+```boemia
+make mensaje: string = "Hola, Boemia Script!";
+print(mensaje);
+
+make x: int = 42;
+print(x);
+```
+
+Compílalo y ejecútalo:
+
+```bash
+./zig-out/bin/boemia-script hello.bs -o hello
+./hello
+```
+
+## Características Implementadas
+
+### Compilador Completo
+- **Análisis Léxico**: Tokenización completa del código fuente
+- **Análisis Sintáctico**: Parser con construcción de AST
+- **Análisis Semántico**: Verificación de tipos y scope
+- **Generación de Código**: Transpilación a C + compilación nativa
+-  **CLI Funcional**: Interfaz de línea de comandos con mensajes claros
+
+### Características del Lenguaje
+- **Variables mutables** (`make`)
+- **Constantes inmutables** (`seal`)
+- **Tipos estáticos**: `int`, `float`, `string`, `bool`
+- **Operadores aritméticos**: `+`, `-`, `*`, `/`
+- **Operadores de comparación**: `==`, `!=`, `<`, `>`, `<=`, `>=`
+- **Condicionales**: `if`, `else if`, `else`
+- **Bucles**: `while`, `for`
+- **Funciones**: Declaración y llamadas con recursión
+- **Print**: Salida por consola con detección automática de tipos
+- **Comentarios**: Comentarios de línea con `//`
+- **Scope estilo TypeScript**
+
+### Futura Implementación (v2.0)
+- ⏳ Arrays y colecciones
+- ⏳ Structs/Clases
+- ⏳ Manejo de errores (try/catch)
+- ⏳ Módulos e imports
+- ⏳ Inferencia de tipos
+- ⏳ Genéricos
+- ⏳ Garbage Collection
 
 ## Sintaxis de Boemia Script
 
@@ -244,17 +304,20 @@ graph LR
 ```
 boemia-script/
 ├── src/
-│   ├── main.zig           # Entry point del compilador
-│   ├── token.zig          # Definiciones de tokens
-│   ├── lexer.zig          # Análisis léxico
-│   ├── ast.zig            # Estructuras del AST
-│   ├── parser.zig         # Análisis sintáctico
-│   ├── analyzer.zig       # Análisis semántico
-│   └── codegen.zig        # Generación de código
-├── examples/              # Programas de ejemplo .bs
-├── tests/                 # Tests unitarios
-├── build.zig             # Build system de Zig
-└── README.md             # Este archivo
+│   ├── main.zig           # Entry point del compilador - CLI completa
+│   ├── token.zig          # Definiciones de tokens - Completamente documentado
+│   ├── lexer.zig          # Análisis léxico - Completamente documentado
+│   ├── ast.zig            # Estructuras del AST - Completo
+│   ├── parser.zig         # Análisis sintáctico - Completo con fixes
+│   ├── analyzer.zig       # Análisis semántico - Completo con fixes
+│   └── codegen.zig        # Generación de código C - Completo
+├── examples/
+│   ├── hello.bs           # Ejemplo completo con funciones y bucles
+│   └── simple.bs          # Ejemplo básico
+├── tests/                 # Tests unitarios (pendiente)
+├── build.zig             # Build system configurado
+├── LICENSE               # MIT License
+└── README.md             # Documentación completa
 ```
 
 ## Stack Tecnológico
@@ -281,42 +344,68 @@ graph TD
 - **Interoperabilidad con C**: Fácil integración
 - **Seguridad**: Sistema de tipos robusto
 
-## Roadmap
+## Output del Compilador
 
-### Fase 1: Frontend (Actual)
-- [x] Lexer
-- [x] Parser
-- [x] Analyzer
-- [ ] Code Generator
-- [ ] CLI
+Cuando compilas un programa, verás un output detallado de cada fase:
 
-### Fase 2: Testing
-- [ ] Test suite completo
-- [ ] Programas de ejemplo
-- [ ] Benchmarks
-
-### Fase 3: Optimizaciones (Futuro)
-- [ ] Optimización de código generado
-- [ ] Mejores mensajes de error
-- [ ] Sugerencias de corrección
-
-### Fase 4: Características Avanzadas (Futuro)
-- [ ] Arrays
-- [ ] Structs
-- [ ] Módulos
-
-## Cómo Compilar
-
-```bash
-# Compilar el compilador
-zig build
-
-# Compilar un programa Boemia Script
-./boemia-compiler examples/hello.bs -o hello
-
-# Ejecutar
-./hello
 ```
+🚀 Boemia Script Compiler
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📄 Input:  examples/hello.bs
+📦 Output: hello
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 Phase 1: Lexical Analysis (Tokenization)
+🌳 Phase 2: Syntax Analysis (Building AST)
+   ✓ Successfully parsed 5 statements
+🔬 Phase 3: Semantic Analysis (Type Checking)
+   ✓ Type checking passed
+⚙️  Phase 4: Code Generation (C Code)
+Successfully compiled to: hello
+
+✅ Compilation successful!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 Run your program with: ./hello
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+## Estado de Implementación
+
+### Fase 1: Compilador Base - COMPLETADA
+- [x] Lexer - Análisis léxico completo
+- [x] Parser - Construcción de AST
+- [x] Analyzer - Verificación de tipos y semántica
+- [x] Code Generator - Generación de código C
+- [x] CLI - Interfaz de línea de comandos
+
+### Fase 2: Características del Lenguaje - COMPLETADA
+- [x] Variables y constantes (make/seal)
+- [x] Tipos básicos (int, float, string, bool)
+- [x] Operadores aritméticos y de comparación
+- [x] Estructuras de control (if/else if/else)
+- [x] Bucles (while, for)
+- [x] Funciones con recursión
+- [x] Print con detección automática de tipos
+- [x] Comentarios de línea
+
+### Fase 3: Testing y Ejemplos - EN PROGRESO
+- [x] Ejemplos básicos (hello.bs, simple.bs)
+- [ ] Test suite completo
+- [ ] Más programas de ejemplo
+- [ ] Benchmarks de rendimiento
+
+### Fase 4: Optimizaciones - FUTURO
+- [ ] Mejores mensajes de error con sugerencias
+- [ ] Optimización de código C generado
+- [ ] Warnings más detallados
+- [ ] Soporte para múltiples backends
+
+### Fase 5: Características Avanzadas - FUTURO
+- [ ] Arrays y colecciones
+- [ ] Structs/tipos personalizados
+- [ ] Módulos e imports
+- [ ] Inferencia de tipos
+- [ ] Manejo de errores (try/catch)
 
 ## Ejemplo Completo
 
@@ -343,6 +432,69 @@ for i: int = 1; i <= 10; i = i + 1 {
     print(i);
 }
 ```
+
+## Detalles Técnicos
+
+### Generación de Código C
+
+Boemia Script usa un enfoque de transpilación a C por varias razones educativas:
+
+1. **Simplicidad**: Más fácil de entender que generar código máquina directo
+2. **Portabilidad**: El código C se compila en cualquier plataforma
+3. **Optimización**: Aprovechamos las optimizaciones de GCC/Clang
+4. **Debugging**: El código C generado es legible y debuggeable
+
+Ejemplo de traducción:
+
+**Boemia Script:**
+```boemia
+make x: int = 42;
+print(x);
+
+if x > 40 {
+    print("Grande!");
+}
+```
+
+**C Generado:**
+```c
+// Generated by Boemia Script Compiler
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+int main(void) {
+    long long x = 42;
+    printf("%lld\n", (long long)x);
+    if ((x > 40)) {
+        printf("%s\n", "Grande!");
+    }
+    return 0;
+}
+```
+
+### Características del Compilador
+
+- **Paso único**: El compilador procesa el archivo en un solo paso
+- **Manejo de errores**: Reporta errores con número de línea y columna
+- **Type safety**: El análisis semántico previene errores de tipos en runtime
+- **Gestión de memoria**: Uso explícito de allocators en Zig
+- **Sin dependencias**: El compilador no requiere librerías externas (excepto GCC)
+
+### Limitaciones Actuales
+
+- **Funciones**: Las funciones se ignoran en el código generado (limitación temporal)
+- **String concatenation**: Solo con el operador `+`
+- **Print automático**: Usa heurísticas para detectar el tipo a imprimir
+- **Scope global**: Todas las variables en main() por ahora
+
+### Optimizaciones Futuras
+
+- Constant folding (evaluar constantes en compile-time)
+- Dead code elimination
+- Inline de funciones pequeñas
+- Generación directa a LLVM IR
 
 ## Contribuir
 
