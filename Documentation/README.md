@@ -246,5 +246,3 @@ Documentos planeados para futuras versiones:
 Estos documentos se crearan segun la demanda y evolucion del proyecto.
 
 ---
-
-**Nota**: Esta es documentacion tecnica seria y profesional. Evita usar emojis o lenguaje informal al contribuir o referenciar estos documentos.
