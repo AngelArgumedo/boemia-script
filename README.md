@@ -42,7 +42,7 @@ Crear un compilador funcional que compile Boemia Script a código nativo, permit
 
 #### Para uso local:
 - Zig 0.15.2 o superior
-- GCC o Clang (para compilar el código C generado) <- opcional
+- GCC o Clang (para compilar el código C generado)
 
 #### Para uso con contenedores (alternativa):
 - Docker o Podman (no requiere instalar Zig ni GCC localmente)
