@@ -87,10 +87,10 @@ graph TB
 Variables que pueden cambiar su valor durante la ejecucion.
 
 ```boemia
-make x: int = 10;
-make nombre: string = "Boemia";
-make activo: bool = true;
-make pi: float = 3.14159;
+let x: int = 10;
+let nombre: string = "Boemia";
+let activo: bool = true;
+let pi: float = 3.14159;
 ```
 
 **Reglas**:
@@ -104,9 +104,9 @@ make pi: float = 3.14159;
 Variables cuyo valor no puede cambiar despues de la inicializacion.
 
 ```boemia
-seal MAX_USERS: int = 100;
-seal PI: float = 3.14159265;
-seal APP_NAME: string = "Boemia Script";
+const MAX_USERS: int = 100;
+const PI: float = 3.14159265;
+const APP_NAME: string = "Boemia Script";
 ```
 
 **Reglas**:
@@ -117,11 +117,11 @@ seal APP_NAME: string = "Boemia Script";
 ### Asignacion
 
 ```boemia
-make x: int = 5;
+let x: int = 5;
 x = 10;              // Valido: x es mutable
 x = x + 5;           // Valido
 
-seal y: int = 20;
+const y: int = 20;
 y = 30;              // ERROR: y es inmutable
 ```
 
@@ -161,9 +161,9 @@ graph TB
 ### int - Enteros
 
 ```boemia
-make edad: int = 25;
-make temperatura: int = -15;
-make contador: int = 0;
+let edad: int = 25;
+let temperatura: int = -15;
+let contador: int = 0;
 ```
 
 Rango: -9,223,372,036,854,775,808 a 9,223,372,036,854,775,807 (64 bits)
@@ -171,9 +171,9 @@ Rango: -9,223,372,036,854,775,808 a 9,223,372,036,854,775,807 (64 bits)
 ### float - Decimales
 
 ```boemia
-make pi: float = 3.14159;
-make altura: float = 1.75;
-make temperatura: float = -3.5;
+let pi: float = 3.14159;
+let altura: float = 1.75;
+let temperatura: float = -3.5;
 ```
 
 Precision: Double precision IEEE 754 (64 bits)
@@ -181,9 +181,9 @@ Precision: Double precision IEEE 754 (64 bits)
 ### string - Cadenas
 
 ```boemia
-make mensaje: string = "Hola Mundo";
-make nombre: string = "Boemia Script";
-make vacio: string = "";
+let mensaje: string = "Hola Mundo";
+let nombre: string = "Boemia Script";
+let vacio: string = "";
 ```
 
 **Caracteristicas**:
@@ -194,9 +194,9 @@ make vacio: string = "";
 ### bool - Booleanos
 
 ```boemia
-make activo: bool = true;
-make completado: bool = false;
-make encontrado: bool = 10 > 5;
+let activo: bool = true;
+let completado: bool = false;
+let encontrado: bool = 10 > 5;
 ```
 
 Valores: `true` o `false`
@@ -220,13 +220,13 @@ graph LR
 ```
 
 ```boemia
-make suma: int = 5 + 3;              // 8
-make resta: int = 10 - 4;            // 6
-make multiplicacion: int = 6 * 7;    // 42
-make division: int = 20 / 4;         // 5
+let suma: int = 5 + 3;              // 8
+let resta: int = 10 - 4;            // 6
+let multiplicacion: int = 6 * 7;    // 42
+let division: int = 20 / 4;         // 5
 
-make compleja: int = (5 + 3) * 2;    // 16
-make anidada: int = 10 + (5 * (3 - 1));  // 20
+let compleja: int = (5 + 3) * 2;    // 16
+let anidada: int = 10 + (5 * (3 - 1));  // 20
 ```
 
 #### Precedencia de Operadores
@@ -239,8 +239,8 @@ make anidada: int = 10 + (5 * (3 - 1));  // 20
 | 4 (Menor) | `==`, `!=` | Izquierda |
 
 ```boemia
-make resultado: int = 2 + 3 * 4;     // 14, no 20
-make resultado2: int = (2 + 3) * 4;  // 20
+let resultado: int = 2 + 3 * 4;     // 14, no 20
+let resultado2: int = (2 + 3) * 4;  // 20
 ```
 
 ### Expresiones de Comparacion
@@ -266,20 +266,20 @@ graph TB
 ```
 
 ```boemia
-make igual: bool = 5 == 5;           // true
-make diferente: bool = 5 != 3;       // true
-make menor: bool = 3 < 5;            // true
-make mayor: bool = 10 > 5;           // true
-make menorIgual: bool = 5 <= 5;      // true
-make mayorIgual: bool = 10 >= 5;     // true
+let igual: bool = 5 == 5;           // true
+let diferente: bool = 5 != 3;       // true
+let menor: bool = 3 < 5;            // true
+let mayor: bool = 10 > 5;           // true
+let menorIgual: bool = 5 <= 5;      // true
+let mayorIgual: bool = 10 >= 5;     // true
 ```
 
 ### Concatenacion de Strings
 
 ```boemia
-make saludo: string = "Hola" + " " + "Mundo";  // "Hola Mundo"
-make nombre: string = "Juan";
-make mensaje: string = "Hola " + nombre;       // "Hola Juan"
+let saludo: string = "Hola" + " " + "Mundo";  // "Hola Mundo"
+let nombre: string = "Juan";
+let mensaje: string = "Hola " + nombre;       // "Hola Juan"
 ```
 
 ## Estructuras de Control
@@ -305,7 +305,7 @@ flowchart TD
 #### if Simple
 
 ```boemia
-make x: int = 10;
+let x: int = 10;
 
 if x > 5 {
     print("x es mayor que 5");
@@ -315,7 +315,7 @@ if x > 5 {
 #### if-else
 
 ```boemia
-make edad: int = 18;
+let edad: int = 18;
 
 if edad >= 18 {
     print("Es mayor de edad");
@@ -327,7 +327,7 @@ if edad >= 18 {
 #### if-else if-else (Cascada)
 
 ```boemia
-make nota: int = 85;
+let nota: int = 85;
 
 if nota >= 90 {
     print("A");
@@ -363,8 +363,8 @@ flowchart TD
 #### if Anidados
 
 ```boemia
-make edad: int = 25;
-make tieneLicencia: bool = true;
+let edad: int = 25;
+let tieneLicencia: bool = true;
 
 if edad >= 18 {
     if tieneLicencia == true {
@@ -392,7 +392,7 @@ flowchart TD
 ```
 
 ```boemia
-make contador: int = 0;
+let contador: int = 0;
 
 while contador < 5 {
     print(contador);
@@ -437,7 +437,7 @@ for i: int = 0; i < 10; i = i + 1 {
 ```boemia
 for x: int = 1; x <= 3; x = x + 1 {
     for y: int = 1; y <= 3; y = y + 1 {
-        make producto: int = x * y;
+        let producto: int = x * y;
         print(producto);
     }
 }
@@ -489,7 +489,7 @@ fn suma(a: int, b: int): int {
     return a + b;
 }
 
-make resultado: int = suma(5, 3);  // 8
+let resultado: int = suma(5, 3);  // 8
 print(resultado);
 ```
 
@@ -497,11 +497,11 @@ print(resultado);
 
 ```boemia
 fn calcularPromedio(a: int, b: int, c: int): float {
-    make suma: int = a + b + c;
+    let suma: int = a + b + c;
     return suma / 3;
 }
 
-make prom: float = calcularPromedio(10, 20, 30);
+let prom: float = calcularPromedio(10, 20, 30);
 ```
 
 ### Recursion
@@ -514,7 +514,7 @@ fn factorial(n: int): int {
     return n * factorial(n - 1);
 }
 
-make resultado: int = factorial(5);  // 120
+let resultado: int = factorial(5);  // 120
 print(resultado);
 ```
 
@@ -551,16 +551,16 @@ print(expresion);
 - Soporta cualquier tipo primitivo
 
 ```boemia
-make x: int = 42;
+let x: int = 42;
 print(x);                    // 42
 
-make pi: float = 3.14;
+let pi: float = 3.14;
 print(pi);                   // 3.140000
 
-make mensaje: string = "Hola";
+let mensaje: string = "Hola";
 print(mensaje);              // Hola
 
-make activo: bool = true;
+let activo: bool = true;
 print(activo);               // true
 
 print(10 + 5);               // 15
@@ -572,7 +572,7 @@ print("Suma: " + "total");   // Suma: total
 ```boemia
 // Esto es un comentario de una linea
 
-make x: int = 42;  // Comentario al final de linea
+let x: int = 42;  // Comentario al final de linea
 
 // Los comentarios son ignorados por el compilador
 // Pueden usarse para documentar el codigo
@@ -587,7 +587,7 @@ make x: int = 42;  // Comentario al final de linea
 
 ```boemia
 {
-    make x: int = 10;
+    let x: int = 10;
     print(x);
 }
 // x no existe fuera del bloque
@@ -610,13 +610,13 @@ graph TB
 ### Ejemplo 1: Calculadora Simple
 
 ```boemia
-make a: int = 10;
-make b: int = 5;
+let a: int = 10;
+let b: int = 5;
 
-make suma: int = a + b;
-make resta: int = a - b;
-make mult: int = a * b;
-make div: int = a / b;
+let suma: int = a + b;
+let resta: int = a - b;
+let mult: int = a * b;
+let div: int = a / b;
 
 print(suma);   // 15
 print(resta);  // 5
@@ -646,7 +646,7 @@ fn fibonacci(n: int): int {
 }
 
 for i: int = 0; i < 10; i = i + 1 {
-    make fib: int = fibonacci(i);
+    let fib: int = fibonacci(i);
     print(fib);
 }
 // Imprime: 0, 1, 1, 2, 3, 5, 8, 13, 21, 34
@@ -686,8 +686,8 @@ Espacios, tabs y saltos de linea se ignoran, excepto:
 - Para separar tokens
 
 ```boemia
-make x:int=5;           // Valido
-make    x   :   int   =   5   ;    // Valido (equivalente)
+let x:int=5;           // Valido
+let    x   :   int   =   5   ;    // Valido (equivalente)
 ```
 
 ## Palabras Reservadas

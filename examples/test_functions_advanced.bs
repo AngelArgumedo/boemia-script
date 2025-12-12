@@ -1,0 +1,32 @@
+// Test avanzado de funciones en Boemia Script
+// Incluye: recursión, múltiples parámetros, y diferentes tipos
+
+// Función que calcula el factorial de un número
+fn factorial(n: int): int {
+    if n <= 1 {
+        return 1;
+    }
+    let n_menos_1: int = n - 1;
+    let fact_recursivo: int = factorial(n_menos_1);
+    return n * fact_recursivo;
+}
+
+// Función que suma tres números enteros
+fn suma_tres(a: int, b: int, c: int): int {
+    return a + b + c;
+}
+
+// Función que compara dos números
+fn es_mayor(a: int, b: int): bool {
+    return a > b;
+}
+
+// Pruebas de las funciones
+let fact5: int = factorial(5);
+print(fact5);
+
+let total: int = suma_tres(10, 20, 30);
+print(total);
+
+let comparacion: bool = es_mayor(10, 5);
+print(comparacion);

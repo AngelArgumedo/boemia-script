@@ -53,8 +53,8 @@ fn suma(a: int, b: int): int {
 **Funcion con multiples parametros**:
 ```boemia
 fn calcularPromedio(a: int, b: int, c: int): float {
-    make total: int = a + b + c;
-    make promedio: float = total / 3;
+    let total: int = a + b + c;
+    let promedio: float = total / 3;
     return promedio;
 }
 ```
@@ -194,13 +194,13 @@ saludar();
 
 **Con argumentos**:
 ```boemia
-make resultado: int = suma(5, 3);
+let resultado: int = suma(5, 3);
 print(resultado);  // 8
 ```
 
 **Llamada anidada**:
 ```boemia
-make total: int = suma(suma(1, 2), suma(3, 4));
+let total: int = suma(suma(1, 2), suma(3, 4));
 // total = suma(3, 7) = 10
 ```
 
@@ -270,18 +270,18 @@ flowchart TD
 
 ```boemia
 // Scope global
-make global: int = 100;
+let global: int = 100;
 
 fn funcion(parametro: int): int {
     // Scope de funcion
     // parametro visible aqui
     // global visible aqui
-    make local: int = 20;
+    let local: int = 20;
 
     if parametro > 0 {
         // Scope de bloque
         // parametro, local, global visibles
-        make bloqueVar: int = 30;
+        let bloqueVar: int = 30;
         print(bloqueVar);  // OK
     }
     // bloqueVar NO visible aqui
@@ -340,7 +340,7 @@ fn suma(a: int, b: int): int {
 }
 
 // Esto NO da error, pero deberia
-make resultado: int = suma("texto", true);
+let resultado: int = suma("texto", true);
 ```
 
 **Razon**: El analyzer actualmente retorna `VOID` para todas las llamadas:
@@ -441,7 +441,7 @@ fn factorial(n: int): int {
     return n * factorial(n - 1);  // Caso recursivo
 }
 
-make resultado: int = factorial(5);
+let resultado: int = factorial(5);
 print(resultado);  // 120
 ```
 
@@ -455,7 +455,7 @@ fn fibonacci(n: int): int {
     return fibonacci(n - 1) + fibonacci(n - 2);  // Recursivo
 }
 
-make fib10: int = fibonacci(10);
+let fib10: int = fibonacci(10);
 print(fib10);  // 55
 ```
 
@@ -471,7 +471,7 @@ fn doblar(x: int): int {
     return x * 2;
 }
 
-make resultado: int = aplicar(doblar, 5);  // 10
+let resultado: int = aplicar(doblar, 5);  // 10
 ```
 
 ## Closures (Futuro)
@@ -479,7 +479,7 @@ make resultado: int = aplicar(doblar, 5);  // 10
 ```boemia
 // Futuro: closures
 fn crearContador(): fn(): int {
-    make count: int = 0;
+    let count: int = 0;
     return fn(): int {
         count = count + 1;
         return count;
@@ -504,8 +504,8 @@ fn suma(a: float, b: float): float {
     return a + b;
 }
 
-make x: int = suma(5, 3);        // Llama version int
-make y: float = suma(5.0, 3.0);  // Llama version float
+let x: int = suma(5, 3);        // Llama version int
+let y: float = suma(5.0, 3.0);  // Llama version float
 ```
 
 ## Funciones Incorporadas
@@ -600,7 +600,7 @@ fn suma(a: int, b: int): int {
 }
 
 // Cuestionable: modifica estado global
-make contador: int = 0;
+let contador: int = 0;
 
 fn incrementarContador(): int {
     contador = contador + 1;  // Efecto secundario

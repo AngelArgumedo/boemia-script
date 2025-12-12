@@ -57,7 +57,7 @@ if condition1 {
 
 **If simple**:
 ```boemia
-make x: int = 10;
+let x: int = 10;
 
 if x > 5 {
     print(x);
@@ -66,7 +66,7 @@ if x > 5 {
 
 **If-else**:
 ```boemia
-make edad: int = 18;
+let edad: int = 18;
 
 if edad >= 18 {
     print("Mayor de edad");
@@ -77,7 +77,7 @@ if edad >= 18 {
 
 **If-else if-else**:
 ```boemia
-make nota: int = 85;
+let nota: int = 85;
 
 if nota >= 90 {
     print("A");
@@ -105,7 +105,7 @@ if true { }
 if false { }
 
 // Valido: variables booleanas
-make activo: bool = true;
+let activo: bool = true;
 if activo { }
 
 // Invalido: tipos no booleanos
@@ -213,7 +213,7 @@ while condition {
 
 **While simple**:
 ```boemia
-make i: int = 0;
+let i: int = 0;
 while i < 10 {
     print(i);
     i = i + 1;
@@ -222,8 +222,8 @@ while i < 10 {
 
 **While con condicion compleja**:
 ```boemia
-make x: int = 100;
-make y: int = 50;
+let x: int = 100;
+let y: int = 50;
 
 while x > y {
     x = x - 10;
@@ -263,7 +263,7 @@ classDiagram
 ### Generacion de Codigo C
 
 ```boemia
-make i: int = 0;
+let i: int = 0;
 while i < 10 {
     print(i);
     i = i + 1;
@@ -346,7 +346,7 @@ for i: int = 10; i > 0; i = i - 1 {
 
 **For con uso de variable declarada antes**:
 ```boemia
-make contador: int = 0;
+let contador: int = 0;
 for i: int = 0; i < 5; i = i + 1 {
     contador = contador + i;
 }
@@ -454,7 +454,7 @@ graph TB
 **Sintaxis**:
 ```boemia
 {
-    make x: int = 5;
+    let x: int = 5;
     print(x);
 }
 ```
@@ -465,7 +465,7 @@ Variables declaradas en un bloque solo existen dentro de ese bloque:
 
 ```boemia
 if true {
-    make x: int = 5;
+    let x: int = 5;
     print(x);  // OK: x existe aqui
 }
 print(x);  // Error: x no existe fuera del bloque
@@ -493,9 +493,9 @@ sequenceDiagram
 
 ```boemia
 if x > 0 {
-    make a: int = 10;
+    let a: int = 10;
     if y > 0 {
-        make b: int = 20;
+        let b: int = 20;
         print(a);  // OK: a existe en scope padre
         print(b);  // OK: b existe en scope actual
     }
@@ -534,9 +534,9 @@ graph TB
 ### Factorial con While
 
 ```boemia
-make n: int = 5;
-make factorial: int = 1;
-make i: int = 1;
+let n: int = 5;
+let factorial: int = 1;
+let i: int = 1;
 
 while i <= n {
     factorial = factorial * i;
@@ -548,15 +548,15 @@ print(factorial);  // 120
 ### Fibonacci con For
 
 ```boemia
-make n: int = 10;
-make a: int = 0;
-make b: int = 1;
+let n: int = 10;
+let a: int = 0;
+let b: int = 1;
 
 print(a);
 print(b);
 
 for i: int = 2; i < n; i = i + 1 {
-    make temp: int = a + b;
+    let temp: int = a + b;
     print(temp);
     a = b;
     b = temp;
@@ -566,9 +566,9 @@ for i: int = 2; i < n; i = i + 1 {
 ### Numero Primo con If y While
 
 ```boemia
-make numero: int = 17;
-make es_primo: bool = true;
-make divisor: int = 2;
+let numero: int = 17;
+let es_primo: bool = true;
+let divisor: int = 2;
 
 if numero < 2 {
     es_primo = false;
@@ -628,7 +628,7 @@ for i: int = 0; i < 10; i = i + 1 {
 
 ```boemia
 // Futuro: switch
-make opcion: int = 2;
+let opcion: int = 2;
 
 switch opcion {
     case 1:
@@ -646,7 +646,7 @@ switch opcion {
 
 ```boemia
 // Futuro: operador ternario
-make resultado: int = x > 5 ? 10 : 20;
+let resultado: int = x > 5 ? 10 : 20;
 ```
 
 ## Mejores Practicas
@@ -669,14 +669,14 @@ if x > 5 && y < 10 || z == 20 {
 
 ```boemia
 // Bueno: condicion que eventualmente sera falsa
-make i: int = 0;
+let i: int = 0;
 while i < 10 {
     print(i);
     i = i + 1;  // i eventualmente sera >= 10
 }
 
 // Malo: sin actualizacion, bucle infinito
-make j: int = 0;
+let j: int = 0;
 while j < 10 {
     print(j);
     // falta: j = j + 1
@@ -692,7 +692,7 @@ for i: int = 0; i < 10; i = i + 1 {
 }
 
 // Funciona pero verboso: while para contador
-make i: int = 0;
+let i: int = 0;
 while i < 10 {
     print(i);
     i = i + 1;

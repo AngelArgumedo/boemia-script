@@ -41,13 +41,23 @@ pub const CodeGenerator = struct {
         // Generate C headers
         try self.writeHeaders();
 
+        // First pass: Generate function declarations
+        for (program.statements) |*stmt| {
+            if (stmt.* == .function_decl) {
+                try self.generateFunctionDecl(stmt.function_decl);
+                try self.write("\n");
+            }
+        }
+
         // Generate main function wrapper
         try self.write("int main(void) {\n");
         self.indent_level += 1;
 
-        // Generate code for all statements
+        // Second pass: Generate code for non-function statements
         for (program.statements) |*stmt| {
-            try self.generateStmt(stmt);
+            if (stmt.* != .function_decl) {
+                try self.generateStmt(stmt);
+            }
         }
 
         // Return 0 from main
@@ -225,6 +235,35 @@ pub const CodeGenerator = struct {
                 _ = func;
             },
         }
+    }
+
+    fn generateFunctionDecl(self: *CodeGenerator, func: *const Stmt.FunctionDecl) CodeGenError!void {
+        // Generate return type
+        try self.write(self.mapType(func.return_type));
+        try self.write(" ");
+
+        // Generate function name
+        try self.write(func.name);
+        try self.write("(");
+
+        // Generate parameters
+        for (func.params, 0..) |param, i| {
+            if (i > 0) try self.write(", ");
+            try self.write(self.mapType(param.data_type));
+            try self.write(" ");
+            try self.write(param.name);
+        }
+
+        try self.write(") {\n");
+        self.indent_level += 1;
+
+        // Generate function body
+        for (func.body) |*stmt| {
+            try self.generateStmt(stmt);
+        }
+
+        self.indent_level -= 1;
+        try self.write("}\n");
     }
 
     fn generateExpr(self: *CodeGenerator, expr: *const Expr) CodeGenError!void {

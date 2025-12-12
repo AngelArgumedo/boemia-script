@@ -132,7 +132,7 @@ make         // Palabra reservada
 
 **Ejemplo**:
 ```boemia
-make x: int = 5;
+let x: int = 5;
 ```
 
 ### SEAL
@@ -143,7 +143,7 @@ make x: int = 5;
 
 **Ejemplo**:
 ```boemia
-seal PI: float = 3.14159;
+const PI: float = 3.14159;
 ```
 
 ### FN
@@ -248,7 +248,7 @@ print("Hola");
 
 **Ejemplo**:
 ```boemia
-make x: int = 42;
+let x: int = 42;
 ```
 
 **Mapeo a C**: `long long` (64 bits)
@@ -261,7 +261,7 @@ make x: int = 42;
 
 **Ejemplo**:
 ```boemia
-make pi: float = 3.14159;
+let pi: float = 3.14159;
 ```
 
 **Mapeo a C**: `double` (64 bits)
@@ -274,7 +274,7 @@ make pi: float = 3.14159;
 
 **Ejemplo**:
 ```boemia
-make nombre: string = "Juan";
+let nombre: string = "Juan";
 ```
 
 **Mapeo a C**: `char*`
@@ -287,7 +287,7 @@ make nombre: string = "Juan";
 
 **Ejemplo**:
 ```boemia
-make activo: bool = true;
+let activo: bool = true;
 ```
 
 **Mapeo a C**: `bool` (C11 stdbool.h)
@@ -340,7 +340,7 @@ fn suma(a: int, b: int): int {
     return a + b;
 }
 
-make lista: int = (1 + 2) * 3;
+let lista: int = (1 + 2) * 3;
 ```
 
 ## Tokens Especiales
@@ -379,7 +379,7 @@ make s = "sin cerrar  // ILLEGAL por string sin cerrar
 **Ejemplo**:
 ```boemia
 // Esto es un comentario
-make x: int = 5;  // Comentario al final de linea
+let x: int = 5;  // Comentario al final de linea
 ```
 
 **Implementacion**: `skipComment()` lee hasta `\n` o EOF

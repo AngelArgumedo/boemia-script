@@ -56,7 +56,7 @@ El lexer genera un token ILLEGAL cuando encuentra un caracter inesperado.
 
 **Ejemplo**:
 ```boemia
-make x: int = 5@;
+let x: int = 5@;
 ```
 
 **Token generado**:
@@ -79,7 +79,7 @@ fn nextToken(self: *Lexer) Token {
 
 **Ejemplo**:
 ```boemia
-make texto: string = "Hola mundo;
+let texto: string = "Hola mundo;
 ```
 
 **Deteccion**:
@@ -145,7 +145,7 @@ graph TB
 
 **Ejemplo**:
 ```boemia
-make x: int = ;
+let x: int = ;
 ```
 
 **Error detectado**:
@@ -299,7 +299,7 @@ Undefined variable 'variable_no_declarada'
 
 **Ejemplo**:
 ```boemia
-make x: int = "texto";
+let x: int = "texto";
 ```
 
 **Error**:
@@ -326,7 +326,7 @@ if (expr_type != decl.data_type) {
 
 **Ejemplo**:
 ```boemia
-seal PI: float = 3.14;
+const PI: float = 3.14;
 PI = 3.15;
 ```
 
@@ -352,8 +352,8 @@ if (symbol.is_const) {
 
 **Ejemplo**:
 ```boemia
-make x: int = 5;
-make x: int = 10;
+let x: int = 5;
+let x: int = 10;
 ```
 
 **Error**:
@@ -378,8 +378,8 @@ if (self.symbol_table.get(decl.name)) |_| {
 
 **Ejemplo**:
 ```boemia
-make texto: string = "Hola";
-make numero: int = texto * 2;
+let texto: string = "Hola";
+let numero: int = texto * 2;
 ```
 
 **Error**:
@@ -509,7 +509,7 @@ graph LR
 **Ejemplo de mensaje completo**:
 ```
 Error at 5:12: Type mismatch: cannot assign string to int
-  make x: int = "texto";
+  let x: int = "texto";
               ^
   Suggestion: Use int value like 42 or convert string to int
 ```
@@ -520,7 +520,7 @@ Error at 5:12: Type mismatch: cannot assign string to int
 
 ```boemia
 Error at programa.bs:5:12: Type mismatch
-  make x: int = "texto";
+  let x: int = "texto";
                 ^~~~~~~
   Expected: int
   Found: string
@@ -537,11 +537,11 @@ E003: Cannot assign to constant
 ### 3. Warnings (Advertencias)
 
 ```boemia
-make x: int = 5;
+let x: int = 5;
 // x nunca se usa
 
 Warning at 1:6: Unused variable 'x'
-  make x: int = 5;
+  let x: int = 5;
        ^
 ```
 
@@ -557,9 +557,9 @@ Did you mean: 'contador'?
 Reportar multiples errores en una sola pasada:
 
 ```boemia
-make x: string = 5;       // Error 1: TypeMismatch
+let x: string = 5;       // Error 1: TypeMismatch
 print(y);                 // Error 2: UndefinedVariable
-seal PI: int = 3.14;      // Error 3: TypeMismatch
+const PI: int = 3.14;      // Error 3: TypeMismatch
 PI = 3;                   // Error 4: ConstantAssignment
 ```
 

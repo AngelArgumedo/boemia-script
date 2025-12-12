@@ -20,21 +20,35 @@ const Symbol = struct {
     is_const: bool,
 };
 
+const FunctionSignature = struct {
+    return_type: DataType,
+    param_types: []DataType,
+};
+
 pub const Analyzer = struct {
     allocator: std.mem.Allocator,
     symbol_table: std.StringHashMap(Symbol),
+    function_table: std.StringHashMap(FunctionSignature),
     errors: std.ArrayList([]const u8),
 
     pub fn init(allocator: std.mem.Allocator) Analyzer {
         return Analyzer{
             .allocator = allocator,
             .symbol_table = std.StringHashMap(Symbol).init(allocator),
+            .function_table = std.StringHashMap(FunctionSignature).init(allocator),
             .errors = .empty,
         };
     }
 
     pub fn deinit(self: *Analyzer) void {
         self.symbol_table.deinit();
+
+        // Free function signatures
+        var it = self.function_table.iterator();
+        while (it.next()) |entry| {
+            self.allocator.free(entry.value_ptr.param_types);
+        }
+        self.function_table.deinit();
         for (self.errors.items) |err| {
             self.allocator.free(err);
         }
@@ -226,6 +240,17 @@ pub const Analyzer = struct {
                 }
             },
             .function_decl => |func| {
+                // Register function in function table
+                var param_types = try self.allocator.alloc(DataType, func.params.len);
+                for (func.params, 0..) |param, i| {
+                    param_types[i] = param.data_type;
+                }
+
+                try self.function_table.put(func.name, FunctionSignature{
+                    .return_type = func.return_type,
+                    .param_types = param_types,
+                });
+
                 // Add parameters to symbol table
                 for (func.params) |param| {
                     try self.symbol_table.put(param.name, Symbol{
@@ -322,10 +347,44 @@ pub const Analyzer = struct {
                 }
             },
             .call => |call| blk: {
-                _ = call;
-                // For now, we'll just return VOID
-                // Proper function type checking would go here
-                break :blk .VOID;
+                // Look up function in function table
+                const func_sig = self.function_table.get(call.name) orelse {
+                    const err = try std.fmt.allocPrint(
+                        self.allocator,
+                        "Undefined function '{s}'",
+                        .{call.name},
+                    );
+                    try self.errors.append(self.allocator, err);
+                    return AnalyzerError.UndefinedVariable;
+                };
+
+                // Check argument count
+                if (call.args.len != func_sig.param_types.len) {
+                    const err = try std.fmt.allocPrint(
+                        self.allocator,
+                        "Function '{s}' expects {d} arguments, got {d}",
+                        .{ call.name, func_sig.param_types.len, call.args.len },
+                    );
+                    try self.errors.append(self.allocator, err);
+                    return AnalyzerError.TypeMismatch;
+                }
+
+                // Check argument types
+                for (call.args, 0..) |*arg, i| {
+                    const arg_type = try self.checkExpr(arg);
+                    if (arg_type != func_sig.param_types[i]) {
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Type mismatch in argument {d} of function '{s}': expected {s}, got {s}",
+                            .{ i + 1, call.name, func_sig.param_types[i].toString(), arg_type.toString() },
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.TypeMismatch;
+                    }
+                }
+
+                // Return the function's return type
+                break :blk func_sig.return_type;
             },
         };
     }

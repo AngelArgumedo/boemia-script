@@ -28,10 +28,10 @@ Este documento describe todos los operadores soportados por Boemia Script, su pr
 
 **Ejemplos**:
 ```boemia
-make a: int = 5 + 3;           // 8
-make b: float = 2.5 + 1.5;     // 4.0
-make c: float = 5 + 2.5;       // 7.5 (promocion)
-make d: string = "Hola" + " Mundo";  // "Hola Mundo"
+let a: int = 5 + 3;           // 8
+let b: float = 2.5 + 1.5;     // 4.0
+let c: float = 5 + 2.5;       // 7.5 (promocion)
+let d: string = "Hola" + " Mundo";  // "Hola Mundo"
 ```
 
 **Codigo C generado**:
@@ -53,9 +53,9 @@ char* d = // concatenacion de strings (futuro)
 
 **Ejemplos**:
 ```boemia
-make a: int = 10 - 3;      // 7
-make b: float = 5.5 - 2.5; // 3.0
-make c: float = 10 - 2.5;  // 7.5
+let a: int = 10 - 3;      // 7
+let b: float = 5.5 - 2.5; // 3.0
+let c: float = 10 - 2.5;  // 7.5
 ```
 
 ### Multiplicacion (*)
@@ -69,14 +69,14 @@ make c: float = 10 - 2.5;  // 7.5
 
 **Ejemplos**:
 ```boemia
-make a: int = 5 * 3;        // 15
-make b: float = 2.5 * 2.0;  // 5.0
-make c: float = 5 * 2.5;    // 12.5
+let a: int = 5 * 3;        // 15
+let b: float = 2.5 * 2.0;  // 5.0
+let c: float = 5 * 2.5;    // 12.5
 ```
 
 **Precedencia en accion**:
 ```boemia
-make x: int = 2 + 3 * 4;  // 14 (no 20)
+let x: int = 2 + 3 * 4;  // 14 (no 20)
 // Equivalente a: 2 + (3 * 4)
 ```
 
@@ -91,9 +91,9 @@ make x: int = 2 + 3 * 4;  // 14 (no 20)
 
 **Ejemplos**:
 ```boemia
-make a: int = 10 / 3;        // 3 (division entera)
-make b: float = 10.0 / 3.0;  // 3.333...
-make c: float = 10 / 3.0;    // 3.333... (promocion)
+let a: int = 10 / 3;        // 3 (division entera)
+let b: float = 10.0 / 3.0;  // 3.333...
+let c: float = 10 / 3.0;    // 3.333... (promocion)
 ```
 
 **Nota**: Division por cero no se verifica en compilacion.
@@ -111,9 +111,9 @@ make c: float = 10 / 3.0;    // 3.333... (promocion)
 
 **Ejemplos**:
 ```boemia
-make a: bool = 5 < 10;           // true
-make b: bool = 3.14 < 2.71;      // false
-make c: bool = "Ana" < "Zoe";    // true
+let a: bool = 5 < 10;           // true
+let b: bool = 3.14 < 2.71;      // false
+let c: bool = "Ana" < "Zoe";    // true
 ```
 
 ### Mayor que (>)
@@ -124,8 +124,8 @@ make c: bool = "Ana" < "Zoe";    // true
 
 **Ejemplos**:
 ```boemia
-make a: bool = 10 > 5;   // true
-make b: bool = 5 > 10;   // false
+let a: bool = 10 > 5;   // true
+let b: bool = 5 > 10;   // false
 ```
 
 ### Menor o igual (<=)
@@ -136,9 +136,9 @@ make b: bool = 5 > 10;   // false
 
 **Ejemplos**:
 ```boemia
-make a: bool = 5 <= 5;   // true
-make b: bool = 5 <= 10;  // true
-make c: bool = 10 <= 5;  // false
+let a: bool = 5 <= 5;   // true
+let b: bool = 5 <= 10;  // true
+let c: bool = 10 <= 5;  // false
 ```
 
 ### Mayor o igual (>=)
@@ -149,9 +149,9 @@ make c: bool = 10 <= 5;  // false
 
 **Ejemplos**:
 ```boemia
-make a: bool = 5 >= 5;   // true
-make b: bool = 10 >= 5;  // true
-make c: bool = 5 >= 10;  // false
+let a: bool = 5 >= 5;   // true
+let b: bool = 10 >= 5;  // true
+let c: bool = 5 >= 10;  // false
 ```
 
 ## Operadores de Igualdad
@@ -170,15 +170,15 @@ make c: bool = 5 >= 10;  // false
 
 **Ejemplos**:
 ```boemia
-make a: bool = 5 == 5;           // true
-make b: bool = 3.14 == 3.14;     // true
-make c: bool = "hola" == "hola"; // true
-make d: bool = true == true;     // true
+let a: bool = 5 == 5;           // true
+let b: bool = 3.14 == 3.14;     // true
+let c: bool = "hola" == "hola"; // true
+let d: bool = true == true;     // true
 ```
 
 **Error**:
 ```boemia
-make x: bool = 5 == 5.0;  // Error: tipos diferentes
+let x: bool = 5 == 5.0;  // Error: tipos diferentes
 ```
 
 ### Desigualdad (!=)
@@ -189,8 +189,8 @@ make x: bool = 5 == 5.0;  // Error: tipos diferentes
 
 **Ejemplos**:
 ```boemia
-make a: bool = 5 != 10;  // true
-make b: bool = 5 != 5;   // false
+let a: bool = 5 != 10;  // true
+let b: bool = 5 != 5;   // false
 ```
 
 ## Operador de Asignacion
@@ -205,11 +205,11 @@ make b: bool = 5 != 5;   // false
 
 **Ejemplos**:
 ```boemia
-make x: int = 5;
+let x: int = 5;
 x = 10;          // OK
 x = x + 1;       // OK
 
-seal PI: float = 3.14;
+const PI: float = 3.14;
 PI = 3.15;       // Error: PI es constante
 ```
 
@@ -225,9 +225,9 @@ PI = 3.15;       // Error: PI es constante
 
 **Ejemplos**:
 ```boemia
-make a: int = -5;        // -5
-make b: int = -(3 + 2);  // -5
-make c: float = -3.14;   // -3.14
+let a: int = -5;        // -5
+let b: int = -(3 + 2);  // -5
+let c: float = -3.14;   // -3.14
 ```
 
 **Codigo C**:
@@ -243,8 +243,8 @@ double c = (-3.14);
 
 **Uso futuro**:
 ```boemia
-make a: bool = !true;   // false
-make b: bool = !(x > 5); // negacion de condicion
+let a: bool = !true;   // false
+let b: bool = !(x > 5); // negacion de condicion
 ```
 
 ## Precedencia Detallada
@@ -313,11 +313,11 @@ Los operadores unarios son asociativos por la derecha:
 Los parentesis `()` tienen la precedencia mas alta y pueden usarse para cambiar el orden de evaluacion:
 
 ```boemia
-make a: int = 2 + 3 * 4;      // 14
-make b: int = (2 + 3) * 4;    // 20
+let a: int = 2 + 3 * 4;      // 14
+let b: int = (2 + 3) * 4;    // 20
 
-make c: int = 10 - 5 - 2;     // 3
-make d: int = 10 - (5 - 2);   // 7
+let c: int = 10 - 5 - 2;     // 3
+let d: int = 10 - (5 - 2);   // 7
 ```
 
 ## Operadores No Soportados

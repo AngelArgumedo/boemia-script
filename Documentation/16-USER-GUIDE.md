@@ -161,10 +161,10 @@ boemia-compiler <archivo.bs> -o <nombre_salida>
 **1. Crear archivo `hola.bs`**:
 
 ```boemia
-make mensaje: string = "Hola, Boemia Script!";
+let mensaje: string = "Hola, Boemia Script!";
 print(mensaje);
 
-make x: int = 42;
+let x: int = 42;
 print(x);
 ```
 
@@ -258,7 +258,7 @@ graph LR
 
 **Ejemplo**:
 ```boemia
-make x: int = 42!;
+let x: int = 42!;
 ```
 
 **Output**:
@@ -285,7 +285,7 @@ Parsing Error:
 
 **Ejemplo**:
 ```boemia
-make x: int = "hola";
+let x: int = "hola";
 ```
 
 **Output**:
@@ -325,10 +325,10 @@ El proyecto incluye varios ejemplos en `examples/`:
 ### hello.bs - Programa Completo
 
 ```boemia
-make mensaje: string = "Hola, Boemia Script!";
+let mensaje: string = "Hola, Boemia Script!";
 print(mensaje);
 
-make counter: int = 0;
+let counter: int = 0;
 while counter < 5 {
     print(counter);
     counter = counter + 1;
@@ -348,29 +348,29 @@ for i: int = 1; i <= 10; i = i + 1 {
 ### types.bs - Tipos de Datos
 
 ```boemia
-make numero: int = 42;
+let numero: int = 42;
 print(numero);
 
-make pi: float = 3.14159;
+let pi: float = 3.14159;
 print(pi);
 
-make mensaje: string = "Boemia Script funciona!";
+let mensaje: string = "Boemia Script funciona!";
 print(mensaje);
 
-make activo: bool = true;
+let activo: bool = true;
 print(activo);
 ```
 
 ### conditionals.bs - Condicionales
 
 ```boemia
-make x: int = 15;
+let x: int = 15;
 
 if x > 10 {
     print("x es mayor que 10");
 }
 
-make score: int = 75;
+let score: int = 75;
 if score >= 90 {
     print("A");
 } else if score >= 80 {

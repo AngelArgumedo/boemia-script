@@ -191,8 +191,8 @@ sequenceDiagram
 
 Boemia:
 ```boemia
-make x: int = 42;
-seal PI: float = 3.14;
+let x: int = 42;
+const PI: float = 3.14;
 ```
 
 C Generado:
@@ -616,11 +616,11 @@ int main(void) {
 ### Entrada (Boemia Script)
 
 ```boemia
-make x: int = 10;
-make y: int = 20;
+let x: int = 10;
+let y: int = 20;
 
 if x < y {
-    make suma: int = x + y;
+    let suma: int = x + y;
     print(suma);
 } else {
     print(x);

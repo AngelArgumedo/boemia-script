@@ -58,7 +58,7 @@ graph TB
 
 ```zig
 test "Lexer: tokens basicos" {
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
 
     var lexer = Lexer.init(std.testing.allocator, source);
 
@@ -142,7 +142,7 @@ test "Lexer: strings" {
 
 ```zig
 test "Parser: declaracion de variable" {
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
 
     var lexer = Lexer.init(std.testing.allocator, source);
     var parser = try Parser.init(std.testing.allocator, &lexer);
@@ -167,7 +167,7 @@ test "Parser: declaracion de variable" {
 
 ```zig
 test "Parser: expresion binaria con precedencia" {
-    const source = "make x: int = 2 + 3 * 4;";
+    const source = "let x: int = 2 + 3 * 4;";
 
     var lexer = Lexer.init(std.testing.allocator, source);
     var parser = try Parser.init(std.testing.allocator, &lexer);
@@ -200,7 +200,7 @@ test "Parser: expresion binaria con precedencia" {
 
 ```zig
 test "Analyzer: type mismatch error" {
-    const source = "make x: int = \"texto\";";
+    const source = "let x: int = \"texto\";";
 
     var lexer = Lexer.init(std.testing.allocator, source);
     var parser = try Parser.init(std.testing.allocator, &lexer);
@@ -252,7 +252,7 @@ test "Analyzer: undefined variable" {
 
 ```zig
 test "CodeGen: variable declaration" {
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
 
     var lexer = Lexer.init(std.testing.allocator, source);
     var parser = try Parser.init(std.testing.allocator, &lexer);
@@ -455,7 +455,7 @@ test "No memory leaks in parsing" {
     }
     const allocator = gpa.allocator();
 
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
     var lexer = Lexer.init(allocator, source);
     var parser = try Parser.init(allocator, &lexer);
     defer parser.deinit();
@@ -514,7 +514,7 @@ test "test1" { }
 ```zig
 test "example" {
     // Arrange: preparar datos
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
     var lexer = Lexer.init(allocator, source);
 
     // Act: ejecutar accion

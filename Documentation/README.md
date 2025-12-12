@@ -139,7 +139,7 @@ Los bloques de codigo usan syntax highlighting:
 
 **Boemia Script**:
 ```boemia
-make x: int = 42;
+let x: int = 42;
 print(x);
 ```
 

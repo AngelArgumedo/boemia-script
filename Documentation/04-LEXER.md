@@ -12,7 +12,7 @@ Un token es la unidad minima de significado en el lenguaje. Cada palabra reserva
 
 **Entrada:**
 ```boemia
-make x: int = 42;
+let x: int = 42;
 ```
 
 **Salida:**
@@ -424,7 +424,7 @@ flowchart TD
 
 **Codigo Fuente**:
 ```boemia
-make x: int = 42;
+let x: int = 42;
 if x > 40 {
     print(x);
 }

@@ -95,18 +95,18 @@ flowchart TD
 
 **Ejemplos**:
 ```boemia
-make x: int = 42;
-make pi: float = 3.14159;
-make nombre: string = "Boemia";
-make activo: bool = true;
-seal CONSTANTE: int = 100;
+let x: int = 42;
+let pi: float = 3.14159;
+let nombre: string = "Boemia";
+let activo: bool = true;
+const CONSTANTE: int = 100;
 ```
 
 ### Tipo Explicito vs Inferido
 
 **Actual (Explicito)**:
 ```boemia
-make x: int = 5;  // Tipo debe declararse
+let x: int = 5;  // Tipo debe declararse
 ```
 
 **Futuro (Inferencia)**:
@@ -185,10 +185,10 @@ graph TB
 
 **Ejemplos**:
 ```boemia
-make a: int = 5 + 3;           // int: 8
-make b: float = 2.5 + 1.5;     // float: 4.0
-make c: float = 5 + 2.5;       // float: 7.5 (promocion)
-make d: string = "Hola" + " Mundo";  // string: "Hola Mundo"
+let a: int = 5 + 3;           // int: 8
+let b: float = 2.5 + 1.5;     // float: 4.0
+let c: float = 5 + 2.5;       // float: 7.5 (promocion)
+let d: string = "Hola" + " Mundo";  // string: "Hola Mundo"
 ```
 
 ### Operaciones de Comparacion
@@ -219,15 +219,15 @@ graph TB
 
 **Ejemplos**:
 ```boemia
-make x: int = 5;
-make y: int = 10;
-make resultado: bool = x < y;        // true
-make igual: bool = x == 5;           // true
-make diferente: bool = x != y;       // true
+let x: int = 5;
+let y: int = 10;
+let resultado: bool = x < y;        // true
+let igual: bool = x == 5;           // true
+let diferente: bool = x != y;       // true
 
-make nombre: string = "Ana";
-make otro: string = "Zoe";
-make orden: bool = nombre < otro;    // true (orden lexicografico)
+let nombre: string = "Ana";
+let otro: string = "Zoe";
+let orden: bool = nombre < otro;    // true (orden lexicografico)
 ```
 
 ### Operaciones Logicas
@@ -270,12 +270,12 @@ flowchart TD
 ### Ejemplos de Promocion
 
 ```boemia
-make a: int = 5;
-make b: float = 2.5;
-make c: float = a + b;  // a promovido a float, resultado: 7.5
+let a: int = 5;
+let b: float = 2.5;
+let c: float = a + b;  // a promovido a float, resultado: 7.5
 
-make x: int = 10;
-make y: float = x / 3.0;  // x promovido a float, resultado: 3.333...
+let x: int = 10;
+let y: float = x / 3.0;  // x promovido a float, resultado: 3.333...
 ```
 
 **Implementacion en el Analyzer**:
@@ -314,9 +314,9 @@ graph TB
 ### Declaracion de Constantes
 
 ```boemia
-seal PI: float = 3.14159;
-seal MAX_SIZE: int = 1000;
-seal NOMBRE: string = "Boemia Script";
+const PI: float = 3.14159;
+const MAX_SIZE: int = 1000;
+const NOMBRE: string = "Boemia Script";
 ```
 
 ### Verificacion de Inmutabilidad
@@ -356,7 +356,7 @@ if (symbol.is_const) {
 
 **Ejemplo de error**:
 ```boemia
-seal PI: float = 3.14;
+const PI: float = 3.14;
 PI = 3.15;  // Error: Cannot assign to constant 'PI'
 ```
 
@@ -409,17 +409,17 @@ graph LR
 
 **No permitido**:
 ```boemia
-make x: int = 5;
-make y: float = x;  // Error: TypeMismatch
+let x: int = 5;
+let y: float = x;  // Error: TypeMismatch
 ```
 
 ### Mejora Futura: Casting Explicito
 
 ```boemia
-make x: int = 5;
-make y: float = float(x);  // Casting explicito
+let x: int = 5;
+let y: float = float(x);  // Casting explicito
 
-make z: int = int(3.14);   // z = 3
+let z: int = int(3.14);   // z = 3
 ```
 
 **Sintaxis propuesta**:
@@ -459,9 +459,9 @@ classDiagram
 ### Ejemplo de Tabla de Simbolos
 
 ```boemia
-make x: int = 5;
-seal PI: float = 3.14;
-make nombre: string = "Hola";
+let x: int = 5;
+const PI: float = 3.14;
+let nombre: string = "Hola";
 ```
 
 **Tabla interna**:
@@ -542,12 +542,12 @@ graph TB
 
 **TypeMismatch**:
 ```boemia
-make x: int = "texto";
+let x: int = "texto";
 // Error: Type mismatch: cannot assign string to int
 
-make a: int = 5;
-make b: string = "10";
-make c: int = a + b;
+let a: int = 5;
+let b: string = "10";
+let c: int = a + b;
 // Error: Invalid operation: int ADD string
 ```
 
@@ -559,14 +559,14 @@ print(variable_no_declarada);
 
 **InvalidOperation**:
 ```boemia
-make texto: string = "Hola";
-make numero: int = texto * 2;
+let texto: string = "Hola";
+let numero: int = texto * 2;
 // Error: Invalid operation: string MUL int
 ```
 
 **ConstantAssignment**:
 ```boemia
-seal MAX: int = 100;
+const MAX: int = 100;
 MAX = 200;
 // Error: Cannot assign to constant 'MAX'
 ```
@@ -594,7 +594,7 @@ graph TB
 
 ```boemia
 // Actual
-make x: int = 5;
+let x: int = 5;
 
 // Futuro
 make x = 5;  // Tipo inferido: int
@@ -627,8 +627,8 @@ make punto: (int, int) = (10, 20);
 
 ```boemia
 // Tipos opcionales
-make nombre: string? = null;  // Puede ser string o null
-make edad: int? = 25;
+let nombre: string? = null;  // Puede ser string o null
+let edad: int? = 25;
 
 // Verificacion
 if nombre != null {

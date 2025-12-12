@@ -58,8 +58,8 @@ El lenguaje distingue entre:
 - **seal**: Constantes inmutables que no pueden ser reasignadas
 
 ```boemia
-make contador: int = 0;      // Mutable
-seal PI: float = 3.14159;    // Inmutable
+let contador: int = 0;      // Mutable
+const PI: float = 3.14159;    // Inmutable
 ```
 
 ### Estructuras de Control Completas
@@ -227,8 +227,8 @@ graph LR
 **Codigo Boemia Script:**
 
 ```boemia
-make x: int = 42;
-seal mensaje: string = "Hola Mundo";
+let x: int = 42;
+const mensaje: string = "Hola Mundo";
 
 if x > 40 {
     print(mensaje);

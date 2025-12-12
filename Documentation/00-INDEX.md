@@ -143,7 +143,7 @@ Si deseas contribuir al proyecto:
 Los ejemplos de codigo Boemia Script se presentan asi:
 
 ```boemia
-make x: int = 42;
+let x: int = 42;
 print(x);
 ```
 

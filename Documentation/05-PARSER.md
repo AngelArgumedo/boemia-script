@@ -565,7 +565,7 @@ Expected SEMICOLON, got RBRACE at 5:12
 
 **Codigo Fuente**:
 ```boemia
-make x: int = 10;
+let x: int = 10;
 if x > 5 {
     print(x);
 }

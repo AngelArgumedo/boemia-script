@@ -161,7 +161,7 @@ done
 
 ```bash
 # Crear un nuevo archivo .bs
-echo 'make x: int = 42; print(x);' > myprogram.bs
+echo 'let x: int = 42; print(x);' > myprogram.bs
 
 # Compilarlo con Docker
 docker run --rm \

@@ -262,7 +262,7 @@ if (result.term.Exited != 0) {
 
 **Codigo Boemia con bug**:
 ```boemia
-make x: int = 5;
+let x: int = 5;
 print(y);  // 'y' no existe - pero paso el analyzer por un bug
 ```
 

@@ -71,7 +71,7 @@ Convertir el codigo fuente (secuencia de caracteres) en una secuencia de tokens.
 
 ### Entrada
 ```boemia
-make x: int = 42;
+let x: int = 42;
 ```
 
 ### Proceso
@@ -196,8 +196,8 @@ AST (validado) + Symbol Table:
 
 | Verificacion | Ejemplo | Resultado |
 |--------------|---------|-----------|
-| Tipo compatible | `make x: int = 42;` | OK |
-| Tipo incompatible | `make x: int = "hola";` | ERROR |
+| Tipo compatible | `let x: int = 42;` | OK |
+| Tipo incompatible | `let x: int = "hola";` | ERROR |
 | Variable definida | `print(x);` despues de declarar x | OK |
 | Variable no definida | `print(y);` sin declarar y | ERROR |
 | Asignar a const | `seal PI = 3.14; PI = 2;` | ERROR |
@@ -300,7 +300,7 @@ Ejecutable binario nativo (ELF en Linux, Mach-O en macOS, PE en Windows)
 
 **Codigo Fuente (hello.bs)**:
 ```boemia
-make x: int = 10;
+let x: int = 10;
 if x > 5 {
     print(x);
 }
@@ -318,7 +318,7 @@ sequenceDiagram
     participant G as GCC
     participant E as Executable
 
-    S->>L: make x: int = 10; if x > 5 { print(x); }
+    S->>L: let x: int = 10; if x > 5 { print(x); }
 
     L->>L: Tokenizar
     L->>P: [MAKE, IDENTIFIER(x), COLON, TYPE_INT, ...]

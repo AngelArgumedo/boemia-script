@@ -38,9 +38,9 @@ make nombre: tipo = valor;
 
 **Ejemplos**:
 ```boemia
-make x: int = 5;
-make nombre: string = "Juan";
-make activo: bool = true;
+let x: int = 5;
+let nombre: string = "Juan";
+let activo: bool = true;
 ```
 
 **Caracteristicas**:
@@ -50,10 +50,10 @@ make activo: bool = true;
 
 **Diferencia con seal**:
 ```boemia
-make x: int = 5;
+let x: int = 5;
 x = 10;  // OK: make permite reasignacion
 
-seal PI: float = 3.14;
+const PI: float = 3.14;
 PI = 3.15;  // Error: seal no permite reasignacion
 ```
 
@@ -70,9 +70,9 @@ seal NOMBRE: tipo = valor;
 
 **Ejemplos**:
 ```boemia
-seal PI: float = 3.14159;
-seal MAX_SIZE: int = 1000;
-seal NOMBRE_APP: string = "Boemia";
+const PI: float = 3.14159;
+const MAX_SIZE: int = 1000;
+const NOMBRE_APP: string = "Boemia";
 ```
 
 **Caracteristicas**:
@@ -165,7 +165,7 @@ while condicion {
 
 **Ejemplos**:
 ```boemia
-make i: int = 0;
+let i: int = 0;
 while i < 10 {
     print(i);
     i = i + 1;
@@ -323,13 +323,13 @@ print(x);
 
 **Ejemplos**:
 ```boemia
-make activo: bool = true;
+let activo: bool = true;
 
 if true {
     // siempre ejecuta
 }
 
-make resultado: bool = (5 > 3);  // true
+let resultado: bool = (5 > 3);  // true
 ```
 
 **Mapeo a C**: `true` (C11 stdbool.h)
@@ -344,13 +344,13 @@ make resultado: bool = (5 > 3);  // true
 
 **Ejemplos**:
 ```boemia
-make inactivo: bool = false;
+let inactivo: bool = false;
 
 if false {
     // nunca ejecuta
 }
 
-make resultado: bool = (5 < 3);  // false
+let resultado: bool = (5 < 3);  // false
 ```
 
 **Mapeo a C**: `false` (C11 stdbool.h)
@@ -367,9 +367,9 @@ make resultado: bool = (5 < 3);  // false
 
 **Ejemplos**:
 ```boemia
-make x: int = 42;
-make y: int = -100;
-make z: int = 0;
+let x: int = 42;
+let y: int = -100;
+let z: int = 0;
 ```
 
 **Mapeo a C**: `long long`
@@ -384,9 +384,9 @@ make z: int = 0;
 
 **Ejemplos**:
 ```boemia
-make pi: float = 3.14159;
-make e: float = 2.71828;
-make x: float = -0.5;
+let pi: float = 3.14159;
+let e: float = 2.71828;
+let x: float = -0.5;
 ```
 
 **Mapeo a C**: `double`
@@ -399,9 +399,9 @@ make x: float = -0.5;
 
 **Ejemplos**:
 ```boemia
-make nombre: string = "Juan";
-make saludo: string = "Hola Mundo";
-make vacio: string = "";
+let nombre: string = "Juan";
+let saludo: string = "Hola Mundo";
+let vacio: string = "";
 ```
 
 **Mapeo a C**: `char*`
@@ -418,9 +418,9 @@ make vacio: string = "";
 
 **Ejemplos**:
 ```boemia
-make activo: bool = true;
-make valido: bool = false;
-make resultado: bool = (x > 5);
+let activo: bool = true;
+let valido: bool = false;
+let resultado: bool = (x > 5);
 ```
 
 **Mapeo a C**: `bool` (C11 stdbool.h)
@@ -481,15 +481,15 @@ graph TB
 ### Usar keyword como identificador
 
 ```boemia
-make make: int = 5;  // Error: 'make' es keyword
-make int: int = 10;  // Error: 'int' es keyword
+let let: int = 5;  // Error: 'let' es keyword
+let int: int = 10;  // Error: 'int' es keyword
 ```
 
 ### Case sensitivity
 
 ```boemia
-make Make: int = 5;   // OK: Make != make
-make INT: int = 10;   // OK: INT != int
+let Make: int = 5;   // OK: Make != make
+let INT: int = 10;   // OK: INT != int
 ```
 
 **Nota**: Las keywords son case-sensitive.
@@ -504,8 +504,8 @@ ma ke x: int = 5;     // Error: 'ma' y 'ke' no son keywords
 
 | Keyword | Categoria | Uso | Ejemplo |
 |---------|-----------|-----|---------|
-| `make` | Declaracion | Variable mutable | `make x: int = 5;` |
-| `seal` | Declaracion | Constante | `seal PI: float = 3.14;` |
+| `let` | Declaracion | Variable mutable | `let x: int = 5;` |
+| `const` | Declaracion | Constante | `const PI: float = 3.14;` |
 | `fn` | Funcion | Declarar funcion | `fn suma(...) {...}` |
 | `return` | Funcion | Retornar valor | `return x + y;` |
 | `if` | Control | Condicional | `if x > 5 {...}` |
@@ -513,12 +513,12 @@ ma ke x: int = 5;     // Error: 'ma' y 'ke' no son keywords
 | `while` | Control | Bucle condicional | `while i < 10 {...}` |
 | `for` | Control | Bucle contador | `for i: int = 0; ...; ... {...}` |
 | `print` | I/O | Imprimir | `print(x);` |
-| `true` | Literal | Booleano verdadero | `make b: bool = true;` |
-| `false` | Literal | Booleano falso | `make b: bool = false;` |
-| `int` | Tipo | Entero | `make x: int = 5;` |
-| `float` | Tipo | Decimal | `make x: float = 3.14;` |
-| `string` | Tipo | Cadena | `make s: string = "hi";` |
-| `bool` | Tipo | Booleano | `make b: bool = true;` |
+| `true` | Literal | Booleano verdadero | `let b: bool = true;` |
+| `false` | Literal | Booleano falso | `let b: bool = false;` |
+| `int` | Tipo | Entero | `let x: int = 5;` |
+| `float` | Tipo | Decimal | `let x: float = 3.14;` |
+| `string` | Tipo | Cadena | `let s: string = "hi";` |
+| `bool` | Tipo | Booleano | `let b: bool = true;` |
 
 ## Referencias
 

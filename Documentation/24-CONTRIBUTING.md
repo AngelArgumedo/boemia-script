@@ -61,7 +61,7 @@ Que paso realmente.
 
 ## Codigo de Ejemplo
 ```boemia
-make x: int = 5;
+let x: int = 5;
 // codigo que causa el bug
 ```
 
@@ -88,7 +88,7 @@ Como deberia funcionar la feature.
 ## Ejemplo de Uso
 ```boemia
 // Como se usaria la feature
-make x: int? = null;
+let x: int? = null;
 ```
 
 ## Alternativas Consideradas
@@ -170,7 +170,7 @@ Todos los cambios deben incluir tests:
 ```zig
 test "descripcion del test" {
     // Arrange
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
 
     // Act
     var lexer = Lexer.init(allocator, source);
@@ -276,10 +276,10 @@ pub fn parseExpression(self: *Parser) !Expr {
 
 ```boemia
 // Nombres de variables: snake_case
-make mi_variable: int = 5;
+let mi_variable: int = 5;
 
 // Constantes: SCREAMING_SNAKE_CASE
-seal MAX_VALUE: int = 100;
+const MAX_VALUE: int = 100;
 
 // Funciones: camelCase o snake_case
 fn calcularSuma(a: int, b: int): int {
@@ -318,7 +318,7 @@ Texto explicativo.
 
 **Ejemplo**:
 ```boemia
-make x: int = 5;
+let x: int = 5;
 ```
 
 **Diagramas Mermaid**:

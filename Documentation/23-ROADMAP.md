@@ -68,7 +68,7 @@ fn factorial(n: int): int {
     return n * factorial(n - 1);
 }
 
-make resultado: int = factorial(5);  // Verificado en compile-time
+let resultado: int = factorial(5);  // Verificado en compile-time
 ```
 
 #### 2. Operadores Logicos
@@ -134,7 +134,7 @@ for i: int = 0; i < 100; i = i + 1 {
 **Ejemplo objetivo**:
 ```
 Error E003 at programa.bs:5:12: Type mismatch
-  make x: int = "texto";
+  let x: int = "texto";
                 ^~~~~~~~
   Expected: int
   Found: string
@@ -167,11 +167,11 @@ graph TB
 ```boemia
 // Arrays
 make numeros: []int = [1, 2, 3, 4, 5];
-make primero: int = numeros[0];
+let primero: int = numeros[0];
 numeros[1] = 10;
 
 fn sumar(arr: []int): int {
-    make total: int = 0;
+    let total: int = 0;
     for i: int = 0; i < len(arr); i = i + 1 {
         total = total + arr[i];
     }
@@ -179,9 +179,9 @@ fn sumar(arr: []int): int {
 }
 
 // Strings avanzados
-make s: string = "Hola";
-make longitud: int = len(s);
-make sub: string = substr(s, 0, 2);  // "Ho"
+let s: string = "Hola";
+let longitud: int = len(s);
+let sub: string = substr(s, 0, 2);  // "Ho"
 ```
 
 ### v0.4: Structs y Tipos Compuestos
@@ -239,8 +239,8 @@ fn identity<T>(x: T): T {
     return x;
 }
 
-make a: int = identity(42);
-make b: string = identity("hola");
+let a: int = identity(42);
+let b: string = identity("hola");
 
 // Inferencia de tipos
 make x = 5;          // infiere int
@@ -272,7 +272,7 @@ export fn suma(a: int, b: int): int {
 // main.bs
 import math;
 
-make resultado: int = math.suma(5, 3);
+let resultado: int = math.suma(5, 3);
 ```
 
 #### 2. Traits e Interfaces
@@ -305,7 +305,7 @@ match valor {
 #### 4. Null Safety
 
 ```boemia
-make nombre: string? = null;  // Tipo opcional
+let nombre: string? = null;  // Tipo opcional
 
 if nombre != null {
     print(nombre);
@@ -326,7 +326,7 @@ async fn fetchData(url: string): string {
 }
 
 fn main() {
-    make data: string = await fetchData("https://...");
+    let data: string = await fetchData("https://...");
 }
 ```
 
@@ -350,7 +350,7 @@ graph TB
 
 ```bash
 $ boemia repl
-boemia> make x: int = 5;
+boemia> let x: int = 5;
 boemia> print(x + 3);
 8
 boemia> fn suma(a: int, b: int): int { return a + b; }
@@ -403,7 +403,7 @@ graph TB
 
 **Constant Folding**:
 ```boemia
-make x: int = 2 + 3 * 4;  // Optimizado a: make x: int = 14;
+let x: int = 2 + 3 * 4;  // Optimizado a: let x: int = 14;
 ```
 
 **Dead Code Elimination**:

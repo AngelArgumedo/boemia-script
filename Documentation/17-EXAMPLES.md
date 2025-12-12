@@ -10,7 +10,7 @@ Este documento presenta ejemplos completos y comentados de programas escritos en
 
 ```boemia
 // Programa mas simple en Boemia Script
-make mensaje: string = "Hola Mundo";
+let mensaje: string = "Hola Mundo";
 print(mensaje);
 ```
 
@@ -27,13 +27,13 @@ Hola Mundo
 ### Ejemplo 2: Operaciones Aritmeticas Basicas
 
 ```boemia
-make a: int = 10;
-make b: int = 5;
+let a: int = 10;
+let b: int = 5;
 
-make suma: int = a + b;
-make resta: int = a - b;
-make multiplicacion: int = a * b;
-make division: int = a / b;
+let suma: int = a + b;
+let resta: int = a - b;
+let multiplicacion: int = a * b;
+let division: int = a / b;
 
 print(suma);            // 15
 print(resta);           // 5
@@ -60,11 +60,11 @@ flowchart TD
 
 ```boemia
 // Constantes matematicas
-seal PI: float = 3.14159;
-seal E: float = 2.71828;
+const PI: float = 3.14159;
+const E: float = 2.71828;
 
-make radio: float = 5.0;
-make area: float = PI * radio * radio;
+let radio: float = 5.0;
+let area: float = PI * radio * radio;
 
 print(area);  // 78.53975
 ```
@@ -74,12 +74,12 @@ print(area);  // 78.53975
 ### Ejemplo 4: Comparaciones
 
 ```boemia
-make edad: int = 25;
+let edad: int = 25;
 
-make esMayor: bool = edad >= 18;
-make esMenor: bool = edad < 18;
-make esIgual: bool = edad == 25;
-make esDiferente: bool = edad != 30;
+let esMayor: bool = edad >= 18;
+let esMenor: bool = edad < 18;
+let esIgual: bool = edad == 25;
+let esDiferente: bool = edad != 30;
 
 print(esMayor);      // true
 print(esMenor);      // false
@@ -92,7 +92,7 @@ print(esDiferente);  // true
 ### Ejemplo 5: Condicionales Simples
 
 ```boemia
-make temperatura: int = 25;
+let temperatura: int = 25;
 
 if temperatura > 30 {
     print("Hace mucho calor");
@@ -120,9 +120,9 @@ flowchart TD
 ### Ejemplo 6: Validacion con Condicionales Anidados
 
 ```boemia
-make edad: int = 20;
-make tieneLicencia: bool = true;
-make tieneSeguro: bool = true;
+let edad: int = 20;
+let tieneLicencia: bool = true;
+let tieneSeguro: bool = true;
 
 if edad >= 18 {
     if tieneLicencia == true {
@@ -144,7 +144,7 @@ if edad >= 18 {
 ### Ejemplo 7: Bucle while - Contador
 
 ```boemia
-make contador: int = 0;
+let contador: int = 0;
 
 while contador < 5 {
     print(contador);
@@ -182,10 +182,10 @@ flowchart TD
 ### Ejemplo 8: Bucle for - Tabla de Multiplicar
 
 ```boemia
-seal NUMERO: int = 7;
+const NUMERO: int = 7;
 
 for i: int = 1; i <= 10; i = i + 1 {
-    make resultado: int = NUMERO * i;
+    let resultado: int = NUMERO * i;
     print(resultado);
 }
 ```
@@ -208,7 +208,7 @@ for i: int = 1; i <= 10; i = i + 1 {
 
 ```boemia
 for i: int = 1; i <= 20; i = i + 1 {
-    make resto: int = i % 2;
+    let resto: int = i % 2;
 
     if resto == 0 {
         print("Par");
@@ -230,8 +230,8 @@ fn factorial(n: int): int {
     return n * factorial(n - 1);
 }
 
-make numero: int = 5;
-make resultado: int = factorial(numero);
+let numero: int = 5;
+let resultado: int = factorial(numero);
 print(resultado);  // 120
 ```
 
@@ -271,7 +271,7 @@ fn fibonacci(n: int): int {
 }
 
 for i: int = 0; i < 10; i = i + 1 {
-    make fib: int = fibonacci(i);
+    let fib: int = fibonacci(i);
     print(fib);
 }
 ```
@@ -335,12 +335,12 @@ fn multiplica(a: int, b: int): int {
     return a * b;
 }
 
-make x: int = 10;
-make y: int = 5;
+let x: int = 10;
+let y: int = 5;
 
-make s: int = suma(x, y);
-make r: int = resta(x, y);
-make m: int = multiplica(x, y);
+let s: int = suma(x, y);
+let r: int = resta(x, y);
+let m: int = multiplica(x, y);
 
 print(s);  // 15
 print(r);  // 5
@@ -360,7 +360,7 @@ fn esPrimo(n: int): bool {
     }
 
     for i: int = 2; i < n; i = i + 1 {
-        make resto: int = n % i;
+        let resto: int = n % i;
         if resto == 0 {
             return false;
         }
@@ -370,7 +370,7 @@ fn esPrimo(n: int): bool {
 }
 
 for num: int = 1; num <= 20; num = num + 1 {
-    make primo: bool = esPrimo(num);
+    let primo: bool = esPrimo(num);
 
     if primo == true {
         print(num);
@@ -417,14 +417,14 @@ flowchart TD
 ```boemia
 fn mcd(a: int, b: int): int {
     while b != 0 {
-        make temp: int = b;
+        let temp: int = b;
         b = a % b;
         a = temp;
     }
     return a;
 }
 
-make resultado: int = mcd(48, 18);
+let resultado: int = mcd(48, 18);
 print(resultado);  // 6
 ```
 
@@ -445,7 +445,7 @@ fn potencia(base: int, exponente: int): int {
         return 1;
     }
 
-    make resultado: int = 1;
+    let resultado: int = 1;
 
     for i: int = 0; i < exponente; i = i + 1 {
         resultado = resultado * base;
@@ -454,9 +454,9 @@ fn potencia(base: int, exponente: int): int {
     return resultado;
 }
 
-make pot1: int = potencia(2, 3);   // 8
-make pot2: int = potencia(5, 2);   // 25
-make pot3: int = potencia(10, 0);  // 1
+let pot1: int = potencia(2, 3);   // 8
+let pot2: int = potencia(5, 2);   // 25
+let pot3: int = potencia(10, 0);  // 1
 
 print(pot1);
 print(pot2);
@@ -467,10 +467,10 @@ print(pot3);
 
 ```boemia
 fn sumaDigitos(n: int): int {
-    make suma: int = 0;
+    let suma: int = 0;
 
     while n > 0 {
-        make digito: int = n % 10;
+        let digito: int = n % 10;
         suma = suma + digito;
         n = n / 10;
     }
@@ -478,8 +478,8 @@ fn sumaDigitos(n: int): int {
     return suma;
 }
 
-make numero: int = 12345;
-make resultado: int = sumaDigitos(numero);
+let numero: int = 12345;
+let resultado: int = sumaDigitos(numero);
 print(resultado);  // 15 (1+2+3+4+5)
 ```
 
@@ -506,10 +506,10 @@ flowchart LR
 
 ```boemia
 fn invertir(n: int): int {
-    make resultado: int = 0;
+    let resultado: int = 0;
 
     while n > 0 {
-        make digito: int = n % 10;
+        let digito: int = n % 10;
         resultado = resultado * 10 + digito;
         n = n / 10;
     }
@@ -517,8 +517,8 @@ fn invertir(n: int): int {
     return resultado;
 }
 
-make numero: int = 12345;
-make invertido: int = invertir(numero);
+let numero: int = 12345;
+let invertido: int = invertir(numero);
 print(invertido);  // 54321
 ```
 
@@ -545,8 +545,8 @@ fn dividir(a: int, b: int): int {
     return a / b;
 }
 
-make a: int = 20;
-make b: int = 5;
+let a: int = 20;
+let b: int = 5;
 
 print("Suma:");
 print(sumar(a, b));
@@ -578,7 +578,7 @@ Division:
 ### Patron 1: Acumulador
 
 ```boemia
-make suma: int = 0;
+let suma: int = 0;
 
 for i: int = 1; i <= 100; i = i + 1 {
     suma = suma + i;
@@ -590,8 +590,8 @@ print(suma);  // 5050
 ### Patron 2: Bandera (Flag)
 
 ```boemia
-make encontrado: bool = false;
-make objetivo: int = 7;
+let encontrado: bool = false;
+let objetivo: int = 7;
 
 for i: int = 1; i <= 10; i = i + 1 {
     if i == objetivo {
@@ -609,10 +609,10 @@ if encontrado == true {
 ### Patron 3: Contador
 
 ```boemia
-make contador: int = 0;
+let contador: int = 0;
 
 for i: int = 1; i <= 20; i = i + 1 {
-    make resto: int = i % 2;
+    let resto: int = i % 2;
     if resto == 0 {
         contador = contador + 1;
     }

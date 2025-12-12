@@ -331,8 +331,8 @@ pub fn main() !void {
 ### Tipos Primitivos en Stack
 
 ```boemia
-make x: int = 5;
-make y: float = 3.14;
+let x: int = 5;
+let y: float = 3.14;
 ```
 
 **C generado**:
@@ -355,7 +355,7 @@ graph TB
 ### Strings: Literales en Data Segment
 
 ```boemia
-make texto: string = "Hola";
+let texto: string = "Hola";
 ```
 
 **C generado**:

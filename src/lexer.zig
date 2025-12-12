@@ -257,9 +257,15 @@ pub const Lexer = struct {
     // - El compilador puede optimizarlo mejor
     pub fn nextToken(self: *Lexer) Token {
         // Primero limpiamos espacios y comentarios
-        self.skipWhitespace();
-        self.skipComment();
-        self.skipWhitespace(); // Por si el comentario tenia espacios despues
+        // Usamos un bucle para manejar múltiples comentarios consecutivos
+        while (true) {
+            self.skipWhitespace();
+            if (self.ch == '/' and self.peekChar() == '/') {
+                self.skipComment();
+            } else {
+                break;
+            }
+        }
 
         // Guardamos la posicion ANTES de consumir el token
         // Esto es importante para reportar errores correctamente

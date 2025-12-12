@@ -344,6 +344,7 @@ pub const Parser = struct {
         const name = self.current_token.lexeme;
 
         try self.expectToken(.LPAREN); // verifies peek is LPAREN, then advances
+        self.nextToken(); // move to first parameter or RPAREN
 
         var params: std.ArrayList(Stmt.Parameter) = .empty;
         defer params.deinit(self.allocator);
@@ -355,6 +356,7 @@ pub const Parser = struct {
             const param_name = self.current_token.lexeme;
 
             try self.expectToken(.COLON); // verifies peek is COLON, then advances
+            self.nextToken(); // move to type token
 
             const param_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
             self.nextToken(); // move past type
@@ -366,13 +368,21 @@ pub const Parser = struct {
             }
         }
 
-        try self.expectToken(.RPAREN);
-        try self.expectToken(.COLON);
+        // current_token is already RPAREN from the loop exit
+        self.nextToken(); // consume RPAREN
+
+        if (self.current_token.type != .COLON) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume COLON and move to return type
 
         const return_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
-        self.nextToken();
+        self.nextToken(); // move past return type
 
-        try self.expectToken(.LBRACE);
+        if (self.current_token.type != .LBRACE) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume LBRACE and move to first statement
         const body = try self.parseBlock();
 
         const func_decl = try self.allocator.create(Stmt.FunctionDecl);
@@ -484,7 +494,8 @@ pub const Parser = struct {
                         }
                     }
 
-                    try self.expectToken(.RPAREN);
+                    // current_token is already RPAREN from loop exit
+                    self.nextToken(); // consume RPAREN
 
                     const call = try self.allocator.create(Expr.CallExpr);
                     call.* = .{

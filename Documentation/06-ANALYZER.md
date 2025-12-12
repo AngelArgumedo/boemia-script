@@ -16,8 +16,8 @@ Mientras el Parser verifica la sintaxis (estructura), el Analyzer verifica la se
 ### Ejemplo
 
 ```boemia
-make x: int = "texto";  // Error semantico: tipo incompatible
-seal PI: float = 3.14;
+let x: int = "texto";  // Error semantico: tipo incompatible
+const PI: float = 3.14;
 PI = 3.15;              // Error semantico: asignacion a constante
 ```
 
@@ -374,7 +374,7 @@ sequenceDiagram
 
 ```boemia
 if true {
-    make x: int = 5;
+    let x: int = 5;
 }
 print(x);  // Error: x no existe fuera del if
 ```
