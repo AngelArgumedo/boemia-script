@@ -1,6 +1,6 @@
 // conditionals.bs - Ejemplos de condicionales
 
-make x: int = 15;
+let x: int = 15;
 
 // Simple if
 if x > 10 {
@@ -8,7 +8,7 @@ if x > 10 {
 }
 
 // If-else
-make y: int = 5;
+let y: int = 5;
 if y > 10 {
     print("y es mayor que 10");
 } else {
@@ -16,7 +16,7 @@ if y > 10 {
 }
 
 // If-else if-else
-make score: int = 75;
+let score: int = 75;
 if score >= 90 {
     print("A");
 } else if score >= 80 {
@@ -28,8 +28,8 @@ if score >= 90 {
 }
 
 // Nested conditionals
-make age: int = 25;
-make hasLicense: bool = true;
+let age: int = 25;
+let hasLicense: bool = true;
 
 if age >= 18 {
     if hasLicense == true {

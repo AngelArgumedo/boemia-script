@@ -23,8 +23,8 @@ pub const TokenType = enum {
     // IDENTIFIER es para nombres de variables, funciones, etc.
     // El resto son palabras clave del lenguaje
     IDENTIFIER, // nombres: x, contador, miVariable
-    MAKE, // palabra clave para variables mutables
-    SEAL, // palabra clave para constantes inmutables
+    LET, // palabra clave para variables mutables (como TypeScript)
+    CONST, // palabra clave para constantes inmutables (como TypeScript)
     FN, // palabra clave para declarar funciones
     RETURN, // palabra clave para retornar valores
     IF, // condicional if
@@ -128,12 +128,12 @@ pub const Token = struct {
 // 3. Es inmutable: las palabras reservadas nunca cambian
 //
 // Esto nos permite distinguir entre:
-// - "make" -> palabra reservada MAKE
+// - "let" -> palabra reservada LET
 // - "miVariable" -> identificador IDENTIFIER
 pub const keywords = std.StaticStringMap(TokenType).initComptime(.{
     // Palabras reservadas para declaraciones
-    .{ "make", .MAKE },
-    .{ "seal", .SEAL },
+    .{ "let", .LET },
+    .{ "const", .CONST },
     .{ "fn", .FN },
     .{ "return", .RETURN },
 
@@ -162,11 +162,11 @@ pub const keywords = std.StaticStringMap(TokenType).initComptime(.{
 //
 // Como funciona:
 // 1. Busca la palabra en el mapa de keywords
-// 2. Si la encuentra, retorna el tipo de token correspondiente (MAKE, IF, etc)
+// 2. Si la encuentra, retorna el tipo de token correspondiente (LET, IF, etc)
 // 3. Si no la encuentra, es un identificador de variable/funcion
 //
 // Ejemplo:
-// lookupIdentifier("make") -> MAKE (es una keyword)
+// lookupIdentifier("let") -> LET (es una keyword)
 // lookupIdentifier("x") -> IDENTIFIER (es un nombre de variable)
 // lookupIdentifier("miFunc") -> IDENTIFIER (es un nombre de funcion)
 pub fn lookupIdentifier(ident: []const u8) TokenType {

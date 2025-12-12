@@ -1,5 +1,5 @@
 // hello.bs - Programa de ejemplo
 
-make mensaje: string = "Hola, Boemia Script!";
+let mensaje: string = "Hola, Boemia Script!";
 print(mensaje);
 

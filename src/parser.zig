@@ -82,7 +82,7 @@ pub const Parser = struct {
 
     fn parseStatement(self: *Parser) ParseError!Stmt {
         return switch (self.current_token.type) {
-            .MAKE, .SEAL => self.parseVariableDecl(),
+            .LET, .CONST => self.parseVariableDecl(),
             .IF => self.parseIfStatement(),
             .WHILE => self.parseWhileStatement(),
             .FOR => self.parseForStatement(),
@@ -101,8 +101,8 @@ pub const Parser = struct {
     }
 
     fn parseVariableDecl(self: *Parser) ParseError!Stmt {
-        const is_const = self.current_token.type == .SEAL;
-        self.nextToken(); // consume 'make' or 'seal'
+        const is_const = self.current_token.type == .CONST;
+        self.nextToken(); // consume 'let' or 'const'
 
         if (self.current_token.type != .IDENTIFIER) {
             return ParseError.UnexpectedToken;
