@@ -120,10 +120,10 @@ podman run --rm \
 Crea un archivo `hello.bs`:
 
 ```boemia
-make mensaje: string = "Hola, Boemia Script!";
+let mensaje: string = "Hola, Boemia Script!";
 print(mensaje);
 
-make x: int = 42;
+let x: int = 42;
 print(x);
 ```
 
@@ -144,8 +144,8 @@ Compílalo y ejecútalo:
 -  **CLI Funcional**: Interfaz de línea de comandos con mensajes claros
 
 ### Características del Lenguaje
-- **Variables mutables** (`make`)
-- **Constantes inmutables** (`seal`)
+- **Variables mutables** (`let`)
+- **Constantes inmutables** (`const`)
 - **Tipos estáticos**: `int`, `float`, `string`, `bool`
 - **Operadores aritméticos**: `+`, `-`, `*`, `/`
 - **Operadores de comparación**: `==`, `!=`, `<`, `>`, `<=`, `>=`
@@ -171,22 +171,22 @@ Compílalo y ejecútalo:
 
 ```boemia
 // Variable mutable
-make x: int = 10;
-make nombre: string = "Boemia";
-make activo: bool = true;
+let x: int = 10;
+let nombre: string = "Boemia";
+let activo: bool = true;
 
 // Constante inmutable
-seal PI: float = 3.14159;
-seal MAX_USERS: int = 100;
+const PI: float = 3.14159;
+const MAX_USERS: int = 100;
 ```
 
 ### Operaciones Aritméticas
 
 ```boemia
-make suma: int = 5 + 3;
-make resta: int = 10 - 4;
-make multiplicacion: int = 6 * 7;
-make division: int = 20 / 4;
+let suma: int = 5 + 3;
+let resta: int = 10 - 4;
+let multiplicacion: int = 6 * 7;
+let division: int = 20 / 4;
 ```
 
 ### Condicionales
@@ -205,7 +205,7 @@ if x > 10 {
 
 ```boemia
 // While loop
-make counter: int = 0;
+let counter: int = 0;
 while counter < 5 {
     print(counter);
     counter = counter + 1;
@@ -228,7 +228,7 @@ fn saludar(nombre: string): void {
     print("Hola " + nombre);
 }
 
-make resultado: int = suma(5, 3);
+let resultado: int = suma(5, 3);
 saludar("Mundo");
 ```
 
@@ -279,8 +279,8 @@ Convierte el código fuente en una secuencia de tokens.
 
 ```mermaid
 graph LR
-    A["make x: int = 5;"] --> B[Lexer]
-    B --> C1[MAKE]
+    A["let x: int = 5;"] --> B[Lexer]
+    B --> C1[LET]
     B --> C2[IDENTIFIER 'x']
     B --> C3[COLON]
     B --> C4[TYPE_INT]
@@ -435,7 +435,7 @@ Run your program with: ./build/hello
 - [x] CLI - Interfaz de línea de comandos
 
 ### Fase 2: Características del Lenguaje - COMPLETADA
-- [x] Variables y constantes (make/seal)
+- [x] Variables y constantes (let/const)
 - [x] Tipos básicos (int, float, string, bool)
 - [x] Operadores aritméticos y de comparación
 - [x] Estructuras de control (if/else if/else)
@@ -468,7 +468,7 @@ Run your program with: ./build/hello
 ```boemia
 // hello.bs - Programa de ejemplo
 
-make mensaje: string = "Hola, Boemia Script!";
+let mensaje: string = "Hola, Boemia Script!";
 print(mensaje);
 
 fn factorial(n: int): int {
@@ -478,7 +478,7 @@ fn factorial(n: int): int {
     return n * factorial(n - 1);
 }
 
-make result: int = factorial(5);
+let result: int = factorial(5);
 print(result);  // Output: 120
 
 for i: int = 1; i <= 10; i = i + 1 {
@@ -533,7 +533,7 @@ Ejemplo de traducción:
 
 **Boemia Script:**
 ```boemia
-make x: int = 42;
+let x: int = 42;
 print(x);
 
 if x > 40 {
