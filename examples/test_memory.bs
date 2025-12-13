@@ -1,0 +1,17 @@
+// Prueba de tipos y memoria
+
+let numero_pequeno: int = 5;
+let numero_grande: int = 2147483647;
+
+let pi: float = 3.14159265358979;
+let numero_decimal: float = 123.456;
+
+let activo: bool = true;
+let mensaje: string = "Hola Boemia!";
+
+print(numero_pequeno);
+print(numero_grande);
+print(pi);
+print(numero_decimal);
+print(activo);
+print(mensaje);
