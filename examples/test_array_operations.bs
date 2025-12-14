@@ -1,0 +1,29 @@
+// Test de operaciones de arrays - Fase 3
+
+// Arrays básicos
+let numeros: [int] = [10, 20, 30, 40, 50];
+let nombres: [string] = ["Ana", "Bob", "Carlos"];
+
+// Index access
+let primero: int = numeros[0];
+let segundo: int = numeros[1];
+
+// Member access
+let cantidad: int = numeros.length;
+
+// Method calls
+numeros.push(60);
+numeros.push(70);
+
+// Arrays anidados con índices encadenados
+let matrix: [[int]] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+let valor: int = matrix[0][1];
+let otro: int = matrix[1][2];
+
+// Combinar operaciones
+let ultimo_idx: int = numeros.length;
+nombres.push("Diana");
+
+print(primero);
+print(cantidad);
+print(valor);

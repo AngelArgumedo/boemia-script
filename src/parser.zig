@@ -528,33 +528,118 @@ pub const Parser = struct {
                 const name = self.current_token.lexeme;
                 self.nextToken();
 
-                // Check for function call
-                if (self.current_token.type == .LPAREN) {
-                    self.nextToken();
-                    var args: std.ArrayList(Expr) = .empty;
-                    defer args.deinit(self.allocator);
+                var expr = Expr{ .identifier = name };
 
-                    while (self.current_token.type != .RPAREN) {
-                        const arg = try self.parseExpression(0);
-                        try args.append(self.allocator, arg);
+                // Loop for chaining: arr[0][1], arr.length, arr.push(5), etc.
+                while (true) {
+                    if (self.current_token.type == .LBRACKET) {
+                        // Index access: arr[index]
+                        self.nextToken(); // consume '['
+                        const index = try self.parseExpression(0);
 
-                        if (self.current_token.type == .COMMA) {
-                            self.nextToken();
+                        if (self.current_token.type != .RBRACKET) {
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Expected ']', got {s} at {}:{}",
+                                .{ @tagName(self.current_token.type), self.current_token.line, self.current_token.column },
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return ParseError.UnexpectedToken;
                         }
+                        self.nextToken(); // consume ']'
+
+                        const idx_access = try self.allocator.create(Expr.IndexAccess);
+                        idx_access.* = .{ .array = expr, .index = index };
+                        expr = Expr{ .index_access = idx_access };
+                    } else if (self.current_token.type == .DOT) {
+                        // Member or method access
+                        self.nextToken(); // consume '.'
+
+                        if (self.current_token.type != .IDENTIFIER) {
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Expected identifier after '.', got {s} at {}:{}",
+                                .{ @tagName(self.current_token.type), self.current_token.line, self.current_token.column },
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return ParseError.UnexpectedToken;
+                        }
+                        const member_name = self.current_token.lexeme;
+                        self.nextToken(); // consume identifier
+
+                        if (self.current_token.type == .LPAREN) {
+                            // Method call: arr.push(5)
+                            self.nextToken(); // consume '('
+
+                            var args: std.ArrayList(Expr) = .empty;
+                            defer args.deinit(self.allocator);
+
+                            while (self.current_token.type != .RPAREN) {
+                                const arg = try self.parseExpression(0);
+                                try args.append(self.allocator, arg);
+
+                                if (self.current_token.type == .COMMA) {
+                                    self.nextToken();
+                                }
+                            }
+                            self.nextToken(); // consume ')'
+
+                            const meth_call = try self.allocator.create(Expr.MethodCall);
+                            meth_call.* = .{
+                                .object = expr,
+                                .method = member_name,
+                                .args = try args.toOwnedSlice(self.allocator),
+                            };
+                            expr = Expr{ .method_call = meth_call };
+                        } else {
+                            // Property access: arr.length
+                            const mem_access = try self.allocator.create(Expr.MemberAccess);
+                            mem_access.* = .{ .object = expr, .member = member_name };
+                            expr = Expr{ .member_access = mem_access };
+                        }
+                    } else if (self.current_token.type == .LPAREN) {
+                        // Function call: func(args)
+                        self.nextToken(); // consume '('
+                        var args: std.ArrayList(Expr) = .empty;
+                        defer args.deinit(self.allocator);
+
+                        while (self.current_token.type != .RPAREN) {
+                            const arg = try self.parseExpression(0);
+                            try args.append(self.allocator, arg);
+
+                            if (self.current_token.type == .COMMA) {
+                                self.nextToken();
+                            }
+                        }
+                        self.nextToken(); // consume ')'
+
+                        // Extract identifier name if it's a simple identifier
+                        const func_name = switch (expr) {
+                            .identifier => |id| id,
+                            else => {
+                                const err = try std.fmt.allocPrint(
+                                    self.allocator,
+                                    "Cannot call non-function expression",
+                                    .{},
+                                );
+                                try self.errors.append(self.allocator, err);
+                                return ParseError.UnexpectedToken;
+                            },
+                        };
+
+                        const call = try self.allocator.create(Expr.CallExpr);
+                        call.* = .{
+                            .name = func_name,
+                            .args = try args.toOwnedSlice(self.allocator),
+                        };
+                        expr = Expr{ .call = call };
+                        break; // Function calls don't chain further
+                    } else {
+                        break;
                     }
-
-                    // current_token is already RPAREN from loop exit
-                    self.nextToken(); // consume RPAREN
-
-                    const call = try self.allocator.create(Expr.CallExpr);
-                    call.* = .{
-                        .name = name,
-                        .args = try args.toOwnedSlice(self.allocator),
-                    };
-                    break :blk Expr{ .call = call };
                 }
 
-                break :blk Expr{ .identifier = name };
+                break :blk expr;
             },
             .LPAREN => blk: {
                 self.nextToken();
