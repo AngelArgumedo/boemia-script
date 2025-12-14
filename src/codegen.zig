@@ -363,6 +363,10 @@ pub const CodeGenerator = struct {
                         .VOID => {
                             try self.write("\"%s\\n\", \"void\"");
                         },
+                        .ARRAY => {
+                            // TODO: Implement array printing in Phase 5
+                            try self.write("\"%s\\n\", \"[array]\"");
+                        },
                     }
                 } else {
                     // Fallback: assume integer if we don't know the type
@@ -388,6 +392,7 @@ pub const CodeGenerator = struct {
             .STRING => "char*",
             .BOOL => "bool",
             .VOID => "void",
+            .ARRAY => "void*", // TODO: Implement proper array types in Phase 5
         };
     }
 

@@ -31,6 +31,7 @@ pub const TokenType = enum {
     ELSE, // condicional else
     WHILE, // bucle while
     FOR, // bucle for
+    IN, // palabra clave para for-in loops
     PRINT, // funcion de salida incorporada
 
     // TIPOS DE DATOS

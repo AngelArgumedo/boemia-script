@@ -111,7 +111,7 @@ pub const Parser = struct {
 
         try self.expectToken(.COLON);
 
-        const data_type = DataType.fromString(self.peek_token.lexeme) orelse return ParseError.InvalidType;
+        const data_type = try DataType.fromString(self.allocator, self.peek_token.lexeme) orelse return ParseError.InvalidType;
         self.nextToken(); // move to type token
 
         try self.expectToken(.ASSIGN);
@@ -232,7 +232,7 @@ pub const Parser = struct {
             self.nextToken(); // consume identifier
             self.nextToken(); // consume ':'
 
-            const data_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
+            const data_type = try DataType.fromString(self.allocator, self.current_token.lexeme) orelse return ParseError.InvalidType;
             self.nextToken(); // consume type
 
             if (self.current_token.type != .ASSIGN) {
@@ -358,7 +358,7 @@ pub const Parser = struct {
             try self.expectToken(.COLON); // verifies peek is COLON, then advances
             self.nextToken(); // move to type token
 
-            const param_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
+            const param_type = try DataType.fromString(self.allocator, self.current_token.lexeme) orelse return ParseError.InvalidType;
             self.nextToken(); // move past type
 
             try params.append(self.allocator, .{ .name = param_name, .data_type = param_type });
@@ -376,7 +376,7 @@ pub const Parser = struct {
         }
         self.nextToken(); // consume COLON and move to return type
 
-        const return_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
+        const return_type = try DataType.fromString(self.allocator, self.current_token.lexeme) orelse return ParseError.InvalidType;
         self.nextToken(); // move past return type
 
         if (self.current_token.type != .LBRACE) {
