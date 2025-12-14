@@ -379,6 +379,18 @@ pub const Lexer = struct {
                 self.readChar();
                 break :blk Token.init(.COMMA, ",", tok_line, tok_column);
             },
+            '[' => blk: {
+                self.readChar();
+                break :blk Token.init(.LBRACKET, "[", tok_line, tok_column);
+            },
+            ']' => blk: {
+                self.readChar();
+                break :blk Token.init(.RBRACKET, "]", tok_line, tok_column);
+            },
+            '.' => blk: {
+                self.readChar();
+                break :blk Token.init(.DOT, ".", tok_line, tok_column);
+            },
 
             // STRINGS
             // Si encontramos ", delegamos a readString()
