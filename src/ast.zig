@@ -99,6 +99,10 @@ pub const Expr = union(enum) {
     binary: *BinaryExpr,
     unary: *UnaryExpr,
     call: *CallExpr,
+    array_literal: *ArrayLiteral,
+    index_access: *IndexAccess,
+    member_access: *MemberAccess,
+    method_call: *MethodCall,
 
     pub const BinaryExpr = struct {
         left: Expr,
@@ -113,6 +117,27 @@ pub const Expr = union(enum) {
 
     pub const CallExpr = struct {
         name: []const u8,
+        args: []Expr,
+    };
+
+    pub const ArrayLiteral = struct {
+        elements: []Expr,
+        element_type: ?DataType,
+    };
+
+    pub const IndexAccess = struct {
+        array: Expr,
+        index: Expr,
+    };
+
+    pub const MemberAccess = struct {
+        object: Expr,
+        member: []const u8,
+    };
+
+    pub const MethodCall = struct {
+        object: Expr,
+        method: []const u8,
         args: []Expr,
     };
 
@@ -133,6 +158,30 @@ pub const Expr = union(enum) {
                 }
                 allocator.free(call.args);
                 allocator.destroy(call);
+            },
+            .array_literal => |arr| {
+                for (arr.elements) |*elem| {
+                    elem.deinit(allocator);
+                }
+                allocator.free(arr.elements);
+                allocator.destroy(arr);
+            },
+            .index_access => |idx| {
+                idx.array.deinit(allocator);
+                idx.index.deinit(allocator);
+                allocator.destroy(idx);
+            },
+            .member_access => |mem| {
+                mem.object.deinit(allocator);
+                allocator.destroy(mem);
+            },
+            .method_call => |meth| {
+                meth.object.deinit(allocator);
+                for (meth.args) |*arg| {
+                    arg.deinit(allocator);
+                }
+                allocator.free(meth.args);
+                allocator.destroy(meth);
             },
             else => {},
         }

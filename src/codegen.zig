@@ -313,6 +313,22 @@ pub const CodeGenerator = struct {
                 }
                 try self.write(")");
             },
+            .array_literal => {
+                // TODO: Implement in Phase 5
+                try self.write("/* array literal */");
+            },
+            .index_access => {
+                // TODO: Implement in Phase 5
+                try self.write("/* index access */");
+            },
+            .member_access => {
+                // TODO: Implement in Phase 5
+                try self.write("/* member access */");
+            },
+            .method_call => {
+                // TODO: Implement in Phase 5
+                try self.write("/* method call */");
+            },
         }
     }
 

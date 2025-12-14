@@ -431,6 +431,22 @@ pub const Analyzer = struct {
                 // Return the function's return type
                 break :blk func_sig.return_type;
             },
+            .array_literal => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
+            },
+            .index_access => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
+            },
+            .member_access => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
+            },
+            .method_call => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
+            },
         };
     }
 };

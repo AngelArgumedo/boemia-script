@@ -1,0 +1,7 @@
+// Test de parsing de arrays - Fase 2
+
+let numeros: [int] = [1, 2, 3, 4, 5];
+let vacio: [int] = [];
+let anidado: [[int]] = [[1, 2], [3, 4]];
+
+print(numeros);
