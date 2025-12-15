@@ -313,6 +313,22 @@ pub const CodeGenerator = struct {
                 }
                 try self.write(")");
             },
+            .array_literal => {
+                // TODO: Implement in Phase 5
+                try self.write("/* array literal */");
+            },
+            .index_access => {
+                // TODO: Implement in Phase 5
+                try self.write("/* index access */");
+            },
+            .member_access => {
+                // TODO: Implement in Phase 5
+                try self.write("/* member access */");
+            },
+            .method_call => {
+                // TODO: Implement in Phase 5
+                try self.write("/* method call */");
+            },
         }
     }
 
@@ -363,6 +379,10 @@ pub const CodeGenerator = struct {
                         .VOID => {
                             try self.write("\"%s\\n\", \"void\"");
                         },
+                        .ARRAY => {
+                            // TODO: Implement array printing in Phase 5
+                            try self.write("\"%s\\n\", \"[array]\"");
+                        },
                     }
                 } else {
                     // Fallback: assume integer if we don't know the type
@@ -388,6 +408,7 @@ pub const CodeGenerator = struct {
             .STRING => "char*",
             .BOOL => "bool",
             .VOID => "void",
+            .ARRAY => "void*", // TODO: Implement proper array types in Phase 5
         };
     }
 

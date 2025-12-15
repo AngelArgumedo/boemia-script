@@ -1,29 +1,91 @@
 const std = @import("std");
 
 /// Data types in Boemia Script
-pub const DataType = enum {
+pub const DataType = union(enum) {
     INT,
     FLOAT,
     STRING,
     BOOL,
     VOID,
+    ARRAY: *ArrayType,
 
-    pub fn fromString(s: []const u8) ?DataType {
+    pub const ArrayType = struct {
+        element_type: *DataType,
+        allocator: std.mem.Allocator,
+    };
+
+    /// Parse a type string and create DataType
+    /// Supports simple types (int, float, etc.) and array syntax [T]
+    pub fn fromString(allocator: std.mem.Allocator, s: []const u8) !?DataType {
+        // Check for simple types first
         if (std.mem.eql(u8, s, "int")) return .INT;
         if (std.mem.eql(u8, s, "float")) return .FLOAT;
         if (std.mem.eql(u8, s, "string")) return .STRING;
         if (std.mem.eql(u8, s, "bool")) return .BOOL;
+        if (std.mem.eql(u8, s, "void")) return .VOID;
+
+        // Check for array syntax: [T]
+        if (s.len >= 3 and s[0] == '[' and s[s.len - 1] == ']') {
+            const inner = s[1 .. s.len - 1];
+            const inner_type = try fromString(allocator, inner) orelse return null;
+
+            const elem_type = try allocator.create(DataType);
+            elem_type.* = inner_type;
+
+            const array_type = try allocator.create(ArrayType);
+            array_type.* = .{
+                .element_type = elem_type,
+                .allocator = allocator,
+            };
+
+            return DataType{ .ARRAY = array_type };
+        }
+
         return null;
     }
 
-    pub fn toString(self: DataType) []const u8 {
+    /// Convert DataType to string representation
+    pub fn toString(self: DataType, allocator: std.mem.Allocator) ![]const u8 {
         return switch (self) {
             .INT => "int",
             .FLOAT => "float",
             .STRING => "string",
             .BOOL => "bool",
             .VOID => "void",
+            .ARRAY => |arr_type| blk: {
+                const inner = try arr_type.element_type.toString(allocator);
+                defer allocator.free(inner);
+                break :blk try std.fmt.allocPrint(allocator, "[{s}]", .{inner});
+            },
         };
+    }
+
+    /// Get C-compatible name for this type (e.g., Array_int, Array_Array_int)
+    pub fn toCName(self: DataType, allocator: std.mem.Allocator) ![]const u8 {
+        return switch (self) {
+            .INT => try allocator.dupe(u8, "int"),
+            .FLOAT => try allocator.dupe(u8, "float"),
+            .STRING => try allocator.dupe(u8, "string"),
+            .BOOL => try allocator.dupe(u8, "bool"),
+            .VOID => try allocator.dupe(u8, "void"),
+            .ARRAY => |arr_type| blk: {
+                const inner = try arr_type.element_type.toCName(allocator);
+                defer allocator.free(inner);
+                break :blk try std.fmt.allocPrint(allocator, "Array_{s}", .{inner});
+            },
+        };
+    }
+
+    /// Free memory for array types (recursive)
+    pub fn deinit(self: *DataType) void {
+        switch (self.*) {
+            .ARRAY => |arr_type| {
+                arr_type.element_type.deinit();
+                arr_type.allocator.destroy(arr_type.element_type);
+                arr_type.allocator.destroy(arr_type);
+            },
+            else => {},
+        }
     }
 };
 
@@ -37,6 +99,10 @@ pub const Expr = union(enum) {
     binary: *BinaryExpr,
     unary: *UnaryExpr,
     call: *CallExpr,
+    array_literal: *ArrayLiteral,
+    index_access: *IndexAccess,
+    member_access: *MemberAccess,
+    method_call: *MethodCall,
 
     pub const BinaryExpr = struct {
         left: Expr,
@@ -51,6 +117,27 @@ pub const Expr = union(enum) {
 
     pub const CallExpr = struct {
         name: []const u8,
+        args: []Expr,
+    };
+
+    pub const ArrayLiteral = struct {
+        elements: []Expr,
+        element_type: ?DataType,
+    };
+
+    pub const IndexAccess = struct {
+        array: Expr,
+        index: Expr,
+    };
+
+    pub const MemberAccess = struct {
+        object: Expr,
+        member: []const u8,
+    };
+
+    pub const MethodCall = struct {
+        object: Expr,
+        method: []const u8,
         args: []Expr,
     };
 
@@ -71,6 +158,30 @@ pub const Expr = union(enum) {
                 }
                 allocator.free(call.args);
                 allocator.destroy(call);
+            },
+            .array_literal => |arr| {
+                for (arr.elements) |*elem| {
+                    elem.deinit(allocator);
+                }
+                allocator.free(arr.elements);
+                allocator.destroy(arr);
+            },
+            .index_access => |idx| {
+                idx.array.deinit(allocator);
+                idx.index.deinit(allocator);
+                allocator.destroy(idx);
+            },
+            .member_access => |mem| {
+                mem.object.deinit(allocator);
+                allocator.destroy(mem);
+            },
+            .method_call => |meth| {
+                meth.object.deinit(allocator);
+                for (meth.args) |*arg| {
+                    arg.deinit(allocator);
+                }
+                allocator.free(meth.args);
+                allocator.destroy(meth);
             },
             else => {},
         }

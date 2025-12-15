@@ -55,6 +55,25 @@ pub const Analyzer = struct {
         self.errors.deinit(self.allocator);
     }
 
+    fn typesEqual(self: *Analyzer, a: DataType, b: DataType) bool {
+        const tag_a = @as(std.meta.Tag(DataType), a);
+        const tag_b = @as(std.meta.Tag(DataType), b);
+
+        if (tag_a != tag_b) return false;
+
+        switch (a) {
+            .ARRAY => |arr_a| {
+                switch (b) {
+                    .ARRAY => |arr_b| {
+                        return typesEqual(self, arr_a.element_type.*, arr_b.element_type.*);
+                    },
+                    else => return false,
+                }
+            },
+            else => return true,
+        }
+    }
+
     pub fn analyze(self: *Analyzer, program: *Program) !void {
         for (program.statements) |*stmt| {
             try self.analyzeStmt(stmt);
@@ -78,11 +97,15 @@ pub const Analyzer = struct {
                 const expr_type = try self.checkExpr(&decl.value);
 
                 // Check type compatibility
-                if (expr_type != decl.data_type) {
+                if (!self.typesEqual(expr_type, decl.data_type)) {
+                    const expr_type_str = try expr_type.toString(self.allocator);
+                    defer self.allocator.free(expr_type_str);
+                    const decl_type_str = try decl.data_type.toString(self.allocator);
+                    defer self.allocator.free(decl_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "Type mismatch: cannot assign {s} to {s}",
-                        .{ expr_type.toString(), decl.data_type.toString() },
+                        .{ expr_type_str, decl_type_str },
                     );
                     try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
@@ -115,11 +138,15 @@ pub const Analyzer = struct {
                 }
 
                 const expr_type = try self.checkExpr(&assign.value);
-                if (expr_type != symbol.data_type) {
+                if (!self.typesEqual(expr_type, symbol.data_type)) {
+                    const expr_type_str = try expr_type.toString(self.allocator);
+                    defer self.allocator.free(expr_type_str);
+                    const symbol_type_str = try symbol.data_type.toString(self.allocator);
+                    defer self.allocator.free(symbol_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "Type mismatch: cannot assign {s} to {s}",
-                        .{ expr_type.toString(), symbol.data_type.toString() },
+                        .{ expr_type_str, symbol_type_str },
                     );
                     try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
@@ -128,10 +155,12 @@ pub const Analyzer = struct {
             .if_stmt => |if_stmt| {
                 const cond_type = try self.checkExpr(&if_stmt.condition);
                 if (cond_type != .BOOL) {
+                    const cond_type_str = try cond_type.toString(self.allocator);
+                    defer self.allocator.free(cond_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "If condition must be bool, got {s}",
-                        .{cond_type.toString()},
+                        .{cond_type_str},
                     );
                     try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
@@ -186,10 +215,12 @@ pub const Analyzer = struct {
             .while_stmt => |while_stmt| {
                 const cond_type = try self.checkExpr(&while_stmt.condition);
                 if (cond_type != .BOOL) {
+                    const cond_type_str = try cond_type.toString(self.allocator);
+                    defer self.allocator.free(cond_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "While condition must be bool, got {s}",
-                        .{cond_type.toString()},
+                        .{cond_type_str},
                     );
                     try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
@@ -206,10 +237,12 @@ pub const Analyzer = struct {
 
                 const cond_type = try self.checkExpr(&for_stmt.condition);
                 if (cond_type != .BOOL) {
+                    const cond_type_str = try cond_type.toString(self.allocator);
+                    defer self.allocator.free(cond_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "For condition must be bool, got {s}",
-                        .{cond_type.toString()},
+                        .{cond_type_str},
                     );
                     try self.errors.append(self.allocator, err);
                     return AnalyzerError.TypeMismatch;
@@ -303,10 +336,14 @@ pub const Analyzer = struct {
                             // String concatenation
                             break :blk .STRING;
                         } else {
+                            const left_type_str = try left_type.toString(self.allocator);
+                            defer self.allocator.free(left_type_str);
+                            const right_type_str = try right_type.toString(self.allocator);
+                            defer self.allocator.free(right_type_str);
                             const err = try std.fmt.allocPrint(
                                 self.allocator,
                                 "Invalid operation: {s} {s} {s}",
-                                .{ left_type.toString(), @tagName(bin.operator), right_type.toString() },
+                                .{ left_type_str, @tagName(bin.operator), right_type_str },
                             );
                             try self.errors.append(self.allocator, err);
                             return AnalyzerError.InvalidOperation;
@@ -314,11 +351,15 @@ pub const Analyzer = struct {
                     },
                     .EQ, .NEQ, .LT, .GT, .LTE, .GTE => {
                         // Comparison operations
-                        if (left_type != right_type) {
+                        if (!self.typesEqual(left_type, right_type)) {
+                            const left_type_str = try left_type.toString(self.allocator);
+                            defer self.allocator.free(left_type_str);
+                            const right_type_str = try right_type.toString(self.allocator);
+                            defer self.allocator.free(right_type_str);
                             const err = try std.fmt.allocPrint(
                                 self.allocator,
                                 "Cannot compare {s} with {s}",
-                                .{ left_type.toString(), right_type.toString() },
+                                .{ left_type_str, right_type_str },
                             );
                             try self.errors.append(self.allocator, err);
                             return AnalyzerError.TypeMismatch;
@@ -372,11 +413,15 @@ pub const Analyzer = struct {
                 // Check argument types
                 for (call.args, 0..) |*arg, i| {
                     const arg_type = try self.checkExpr(arg);
-                    if (arg_type != func_sig.param_types[i]) {
+                    if (!self.typesEqual(arg_type, func_sig.param_types[i])) {
+                        const expected_type_str = try func_sig.param_types[i].toString(self.allocator);
+                        defer self.allocator.free(expected_type_str);
+                        const arg_type_str = try arg_type.toString(self.allocator);
+                        defer self.allocator.free(arg_type_str);
                         const err = try std.fmt.allocPrint(
                             self.allocator,
                             "Type mismatch in argument {d} of function '{s}': expected {s}, got {s}",
-                            .{ i + 1, call.name, func_sig.param_types[i].toString(), arg_type.toString() },
+                            .{ i + 1, call.name, expected_type_str, arg_type_str },
                         );
                         try self.errors.append(self.allocator, err);
                         return AnalyzerError.TypeMismatch;
@@ -385,6 +430,22 @@ pub const Analyzer = struct {
 
                 // Return the function's return type
                 break :blk func_sig.return_type;
+            },
+            .array_literal => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
+            },
+            .index_access => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
+            },
+            .member_access => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
+            },
+            .method_call => {
+                // TODO: Implement in Phase 4
+                return AnalyzerError.InvalidOperation;
             },
         };
     }

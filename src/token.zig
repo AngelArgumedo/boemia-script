@@ -31,6 +31,7 @@ pub const TokenType = enum {
     ELSE, // condicional else
     WHILE, // bucle while
     FOR, // bucle for
+    IN, // palabra clave para for-in loops
     PRINT, // funcion de salida incorporada
 
     // TIPOS DE DATOS
@@ -61,9 +62,12 @@ pub const TokenType = enum {
     RPAREN, // parentesis derecho: )
     LBRACE, // llave izquierda: {
     RBRACE, // llave derecha: }
+    LBRACKET, // corchete izquierdo: [ (para arrays)
+    RBRACKET, // corchete derecho: ] (para arrays)
     SEMICOLON, // punto y coma: ;
     COLON, // dos puntos: :
     COMMA, // coma: ,
+    DOT, // punto: . (para member access)
 
     // ESPECIALES
     // Tokens que tienen significado especial
@@ -142,6 +146,7 @@ pub const keywords = std.StaticStringMap(TokenType).initComptime(.{
     .{ "else", .ELSE },
     .{ "while", .WHILE },
     .{ "for", .FOR },
+    .{ "in", .IN }, // para for-in loops
 
     // Funciones incorporadas
     .{ "print", .PRINT },

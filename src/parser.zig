@@ -59,6 +59,58 @@ pub const Parser = struct {
         self.nextToken(); // Advance after checking
     }
 
+    // Parse data types including array syntax: int, float, [int], [[int]], etc.
+    // Expects type to be in peek_token when called
+    // After calling, peek_token will be the token after the type
+    fn parseDataType(self: *Parser) ParseError!DataType {
+        // Check for array syntax: [T]
+        if (self.peek_token.type == .LBRACKET) {
+            self.nextToken(); // consume current, move to '['
+            // Now current = '[', peek = element type or another '['
+
+            // Recursively parse element type
+            const element_type = try self.parseDataType();
+            // Now peek should be ']'
+
+            if (self.peek_token.type != .RBRACKET) {
+                const err = try std.fmt.allocPrint(
+                    self.allocator,
+                    "Expected ']', got {s} at {}:{}",
+                    .{ @tagName(self.peek_token.type), self.peek_token.line, self.peek_token.column },
+                );
+                try self.errors.append(self.allocator, err);
+                return ParseError.UnexpectedToken;
+            }
+            self.nextToken(); // consume ']'
+
+            // Create DataType.ARRAY
+            const elem_type_ptr = try self.allocator.create(DataType);
+            elem_type_ptr.* = element_type;
+
+            const array_type = try self.allocator.create(DataType.ArrayType);
+            array_type.* = .{
+                .element_type = elem_type_ptr,
+                .allocator = self.allocator,
+            };
+
+            return DataType{ .ARRAY = array_type };
+        }
+
+        // Simple type: int, float, string, bool, void
+        const data_type = try DataType.fromString(self.allocator, self.peek_token.lexeme) orelse {
+            const err = try std.fmt.allocPrint(
+                self.allocator,
+                "Invalid type '{s}' at {}:{}",
+                .{ self.peek_token.lexeme, self.peek_token.line, self.peek_token.column },
+            );
+            try self.errors.append(self.allocator, err);
+            return ParseError.InvalidType;
+        };
+
+        self.nextToken(); // consume type token
+        return data_type;
+    }
+
     pub fn parseProgram(self: *Parser) !Program {
         var statements: std.ArrayList(Stmt) = .empty;
         errdefer statements.deinit(self.allocator);
@@ -111,8 +163,7 @@ pub const Parser = struct {
 
         try self.expectToken(.COLON);
 
-        const data_type = DataType.fromString(self.peek_token.lexeme) orelse return ParseError.InvalidType;
-        self.nextToken(); // move to type token
+        const data_type = try self.parseDataType();
 
         try self.expectToken(.ASSIGN);
         self.nextToken(); // move to expression start
@@ -230,10 +281,12 @@ pub const Parser = struct {
             // Variable declaration in for loop: i: int = 0;
             const name = self.current_token.lexeme;
             self.nextToken(); // consume identifier
-            self.nextToken(); // consume ':'
 
-            const data_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
-            self.nextToken(); // consume type
+            if (self.current_token.type != .COLON) {
+                return ParseError.UnexpectedToken;
+            }
+
+            const data_type = try self.parseDataType();
 
             if (self.current_token.type != .ASSIGN) {
                 return ParseError.UnexpectedToken;
@@ -356,10 +409,8 @@ pub const Parser = struct {
             const param_name = self.current_token.lexeme;
 
             try self.expectToken(.COLON); // verifies peek is COLON, then advances
-            self.nextToken(); // move to type token
 
-            const param_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
-            self.nextToken(); // move past type
+            const param_type = try self.parseDataType();
 
             try params.append(self.allocator, .{ .name = param_name, .data_type = param_type });
 
@@ -374,10 +425,8 @@ pub const Parser = struct {
         if (self.current_token.type != .COLON) {
             return ParseError.UnexpectedToken;
         }
-        self.nextToken(); // consume COLON and move to return type
 
-        const return_type = DataType.fromString(self.current_token.lexeme) orelse return ParseError.InvalidType;
-        self.nextToken(); // move past return type
+        const return_type = try self.parseDataType();
 
         if (self.current_token.type != .LBRACE) {
             return ParseError.UnexpectedToken;
@@ -479,39 +528,173 @@ pub const Parser = struct {
                 const name = self.current_token.lexeme;
                 self.nextToken();
 
-                // Check for function call
-                if (self.current_token.type == .LPAREN) {
-                    self.nextToken();
-                    var args: std.ArrayList(Expr) = .empty;
-                    defer args.deinit(self.allocator);
+                var expr = Expr{ .identifier = name };
 
-                    while (self.current_token.type != .RPAREN) {
-                        const arg = try self.parseExpression(0);
-                        try args.append(self.allocator, arg);
+                // Loop for chaining: arr[0][1], arr.length, arr.push(5), etc.
+                while (true) {
+                    if (self.current_token.type == .LBRACKET) {
+                        // Index access: arr[index]
+                        self.nextToken(); // consume '['
+                        const index = try self.parseExpression(0);
 
-                        if (self.current_token.type == .COMMA) {
-                            self.nextToken();
+                        if (self.current_token.type != .RBRACKET) {
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Expected ']', got {s} at {}:{}",
+                                .{ @tagName(self.current_token.type), self.current_token.line, self.current_token.column },
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return ParseError.UnexpectedToken;
                         }
+                        self.nextToken(); // consume ']'
+
+                        const idx_access = try self.allocator.create(Expr.IndexAccess);
+                        idx_access.* = .{ .array = expr, .index = index };
+                        expr = Expr{ .index_access = idx_access };
+                    } else if (self.current_token.type == .DOT) {
+                        // Member or method access
+                        self.nextToken(); // consume '.'
+
+                        if (self.current_token.type != .IDENTIFIER) {
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Expected identifier after '.', got {s} at {}:{}",
+                                .{ @tagName(self.current_token.type), self.current_token.line, self.current_token.column },
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return ParseError.UnexpectedToken;
+                        }
+                        const member_name = self.current_token.lexeme;
+                        self.nextToken(); // consume identifier
+
+                        if (self.current_token.type == .LPAREN) {
+                            // Method call: arr.push(5)
+                            self.nextToken(); // consume '('
+
+                            var args: std.ArrayList(Expr) = .empty;
+                            defer args.deinit(self.allocator);
+
+                            while (self.current_token.type != .RPAREN) {
+                                const arg = try self.parseExpression(0);
+                                try args.append(self.allocator, arg);
+
+                                if (self.current_token.type == .COMMA) {
+                                    self.nextToken();
+                                }
+                            }
+                            self.nextToken(); // consume ')'
+
+                            const meth_call = try self.allocator.create(Expr.MethodCall);
+                            meth_call.* = .{
+                                .object = expr,
+                                .method = member_name,
+                                .args = try args.toOwnedSlice(self.allocator),
+                            };
+                            expr = Expr{ .method_call = meth_call };
+                        } else {
+                            // Property access: arr.length
+                            const mem_access = try self.allocator.create(Expr.MemberAccess);
+                            mem_access.* = .{ .object = expr, .member = member_name };
+                            expr = Expr{ .member_access = mem_access };
+                        }
+                    } else if (self.current_token.type == .LPAREN) {
+                        // Function call: func(args)
+                        self.nextToken(); // consume '('
+                        var args: std.ArrayList(Expr) = .empty;
+                        defer args.deinit(self.allocator);
+
+                        while (self.current_token.type != .RPAREN) {
+                            const arg = try self.parseExpression(0);
+                            try args.append(self.allocator, arg);
+
+                            if (self.current_token.type == .COMMA) {
+                                self.nextToken();
+                            }
+                        }
+                        self.nextToken(); // consume ')'
+
+                        // Extract identifier name if it's a simple identifier
+                        const func_name = switch (expr) {
+                            .identifier => |id| id,
+                            else => {
+                                const err = try std.fmt.allocPrint(
+                                    self.allocator,
+                                    "Cannot call non-function expression",
+                                    .{},
+                                );
+                                try self.errors.append(self.allocator, err);
+                                return ParseError.UnexpectedToken;
+                            },
+                        };
+
+                        const call = try self.allocator.create(Expr.CallExpr);
+                        call.* = .{
+                            .name = func_name,
+                            .args = try args.toOwnedSlice(self.allocator),
+                        };
+                        expr = Expr{ .call = call };
+                        break; // Function calls don't chain further
+                    } else {
+                        break;
                     }
-
-                    // current_token is already RPAREN from loop exit
-                    self.nextToken(); // consume RPAREN
-
-                    const call = try self.allocator.create(Expr.CallExpr);
-                    call.* = .{
-                        .name = name,
-                        .args = try args.toOwnedSlice(self.allocator),
-                    };
-                    break :blk Expr{ .call = call };
                 }
 
-                break :blk Expr{ .identifier = name };
+                break :blk expr;
             },
             .LPAREN => blk: {
                 self.nextToken();
                 const expr = try self.parseExpression(0);
                 try self.expectToken(.RPAREN);
                 break :blk expr;
+            },
+            .LBRACKET => blk: {
+                self.nextToken(); // consume '['
+
+                var elements: std.ArrayList(Expr) = .empty;
+                defer elements.deinit(self.allocator);
+
+                // Check for empty array
+                if (self.current_token.type == .RBRACKET) {
+                    self.nextToken(); // consume ']'
+                    const arr_lit = try self.allocator.create(Expr.ArrayLiteral);
+                    arr_lit.* = .{
+                        .elements = try elements.toOwnedSlice(self.allocator),
+                        .element_type = null,
+                    };
+                    break :blk Expr{ .array_literal = arr_lit };
+                }
+
+                // Parse elements separated by comma
+                while (true) {
+                    const elem = try self.parseExpression(0);
+                    try elements.append(self.allocator, elem);
+
+                    if (self.current_token.type == .COMMA) {
+                        self.nextToken();
+                        continue;
+                    }
+
+                    if (self.current_token.type == .RBRACKET) {
+                        self.nextToken(); // consume ']'
+                        break;
+                    }
+
+                    // Unexpected token
+                    const err = try std.fmt.allocPrint(
+                        self.allocator,
+                        "Expected ',' or ']' in array literal, got {s} at {}:{}",
+                        .{ @tagName(self.current_token.type), self.current_token.line, self.current_token.column },
+                    );
+                    try self.errors.append(self.allocator, err);
+                    return ParseError.UnexpectedToken;
+                }
+
+                const arr_lit = try self.allocator.create(Expr.ArrayLiteral);
+                arr_lit.* = .{
+                    .elements = try elements.toOwnedSlice(self.allocator),
+                    .element_type = null,
+                };
+                break :blk Expr{ .array_literal = arr_lit };
             },
             .MINUS => blk: {
                 self.nextToken();
