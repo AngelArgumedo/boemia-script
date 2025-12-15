@@ -1,0 +1,22 @@
+// Test de errores de tipo - Fase 4
+
+// Error 1: Tipos mixtos en array literal
+let mixto: [int] = [1, 2, "tres", 4];
+
+// Error 2: Índice no es int
+let arr: [int] = [10, 20, 30];
+let malo: int = arr["hola"];
+
+// Error 3: Intentar indexar tipo no-array
+let numero: int = 42;
+let error: int = numero[0];
+
+// Error 4: Property inexistente
+let bad_prop: int = arr.size;
+
+// Error 5: Método inexistente
+arr.pop();
+
+// Error 6: push con tipo incorrecto
+let strings: [string] = ["a", "b"];
+strings.push(123);

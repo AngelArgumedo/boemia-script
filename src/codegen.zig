@@ -20,6 +20,8 @@ pub const CodeGenerator = struct {
     indent_level: usize,
     string_literals: std.ArrayList([]const u8),
     variable_types: std.StringHashMap(DataType),
+    array_types_seen: std.StringHashMap(DataType),
+    temp_counter: usize,
 
     pub fn init(allocator: std.mem.Allocator) CodeGenerator {
         return CodeGenerator{
@@ -28,6 +30,8 @@ pub const CodeGenerator = struct {
             .indent_level = 0,
             .string_literals = .empty,
             .variable_types = std.StringHashMap(DataType).init(allocator),
+            .array_types_seen = std.StringHashMap(DataType).init(allocator),
+            .temp_counter = 0,
         };
     }
 
@@ -35,11 +39,15 @@ pub const CodeGenerator = struct {
         self.output.deinit(self.allocator);
         self.string_literals.deinit(self.allocator);
         self.variable_types.deinit();
+        self.array_types_seen.deinit();
     }
 
     pub fn generate(self: *CodeGenerator, program: *Program) ![]const u8 {
         // Generate C headers
         try self.writeHeaders();
+
+        // Generate array struct definitions and helper functions
+        try self.writeArrayStructDefinitions(program);
 
         // First pass: Generate function declarations
         for (program.statements) |*stmt| {
@@ -78,6 +86,284 @@ pub const CodeGenerator = struct {
         try self.write("\n");
     }
 
+    fn collectArrayTypes(self: *CodeGenerator, program: *Program) !void {
+        for (program.statements) |*stmt| {
+            try self.collectArrayTypesFromStmt(stmt);
+        }
+    }
+
+    fn collectNestedArrayTypes(self: *CodeGenerator, data_type: DataType) CodeGenError!void {
+        switch (data_type) {
+            .ARRAY => |arr_type| {
+                // First, recursively collect element type if it's also an array
+                if (arr_type.element_type.* == .ARRAY) {
+                    try self.collectNestedArrayTypes(arr_type.element_type.*);
+                }
+
+                // Then collect this type
+                const type_name = try data_type.toCName(self.allocator);
+                // Only add if not already seen
+                if (!self.array_types_seen.contains(type_name)) {
+                    try self.array_types_seen.put(type_name, data_type);
+                } else {
+                    self.allocator.free(type_name);
+                }
+            },
+            else => {},
+        }
+    }
+
+    fn collectArrayTypesFromStmt(self: *CodeGenerator, stmt: *const Stmt) CodeGenError!void {
+        switch (stmt.*) {
+            .variable_decl => |decl| {
+                if (decl.data_type == .ARRAY) {
+                    // Recursively collect all nested array types
+                    try self.collectNestedArrayTypes(decl.data_type);
+                }
+                try self.collectArrayTypesFromExpr(&decl.value);
+            },
+            .assignment => |assign| {
+                try self.collectArrayTypesFromExpr(&assign.value);
+            },
+            .if_stmt => |if_stmt| {
+                try self.collectArrayTypesFromExpr(&if_stmt.condition);
+                for (if_stmt.then_block) |*s| {
+                    try self.collectArrayTypesFromStmt(s);
+                }
+                if (if_stmt.else_block) |else_block| {
+                    for (else_block) |*s| {
+                        try self.collectArrayTypesFromStmt(s);
+                    }
+                }
+            },
+            .while_stmt => |while_stmt| {
+                try self.collectArrayTypesFromExpr(&while_stmt.condition);
+                for (while_stmt.body) |*s| {
+                    try self.collectArrayTypesFromStmt(s);
+                }
+            },
+            .for_stmt => |for_stmt| {
+                if (for_stmt.init) |init_stmt| {
+                    try self.collectArrayTypesFromStmt(init_stmt);
+                }
+                try self.collectArrayTypesFromExpr(&for_stmt.condition);
+                if (for_stmt.update) |update| {
+                    try self.collectArrayTypesFromStmt(update);
+                }
+                for (for_stmt.body) |*s| {
+                    try self.collectArrayTypesFromStmt(s);
+                }
+            },
+            .for_in_stmt => |for_in| {
+                try self.collectArrayTypesFromExpr(&for_in.iterable);
+                for (for_in.body) |*s| {
+                    try self.collectArrayTypesFromStmt(s);
+                }
+            },
+            .return_stmt => |ret_stmt| {
+                if (ret_stmt.value) |*val| {
+                    try self.collectArrayTypesFromExpr(val);
+                }
+            },
+            .expr_stmt => |*expr| {
+                try self.collectArrayTypesFromExpr(expr);
+            },
+            .print_stmt => |*expr| {
+                try self.collectArrayTypesFromExpr(expr);
+            },
+            .block => |stmts| {
+                for (stmts) |*s| {
+                    try self.collectArrayTypesFromStmt(s);
+                }
+            },
+            .function_decl => |func| {
+                for (func.body) |*s| {
+                    try self.collectArrayTypesFromStmt(s);
+                }
+            },
+        }
+    }
+
+    fn collectArrayTypesFromExpr(self: *CodeGenerator, expr: *const Expr) CodeGenError!void {
+        switch (expr.*) {
+            .integer, .float, .string, .boolean, .identifier => {},
+            .binary => |bin| {
+                try self.collectArrayTypesFromExpr(&bin.left);
+                try self.collectArrayTypesFromExpr(&bin.right);
+            },
+            .unary => |un| {
+                try self.collectArrayTypesFromExpr(&un.operand);
+            },
+            .call => |call| {
+                for (call.args) |*arg| {
+                    try self.collectArrayTypesFromExpr(arg);
+                }
+            },
+            .array_literal => |arr| {
+                for (arr.elements) |*elem| {
+                    try self.collectArrayTypesFromExpr(elem);
+                }
+            },
+            .index_access => |idx| {
+                try self.collectArrayTypesFromExpr(&idx.array);
+                try self.collectArrayTypesFromExpr(&idx.index);
+            },
+            .member_access => |mem| {
+                try self.collectArrayTypesFromExpr(&mem.object);
+            },
+            .method_call => |meth| {
+                try self.collectArrayTypesFromExpr(&meth.object);
+                for (meth.args) |*arg| {
+                    try self.collectArrayTypesFromExpr(arg);
+                }
+            },
+        }
+    }
+
+    fn mapTypeToC(self: *CodeGenerator, data_type: DataType) ![]const u8 {
+        return switch (data_type) {
+            .INT => try std.fmt.allocPrint(self.allocator, "long long", .{}),
+            .FLOAT => try std.fmt.allocPrint(self.allocator, "double", .{}),
+            .STRING => try std.fmt.allocPrint(self.allocator, "char*", .{}),
+            .BOOL => try std.fmt.allocPrint(self.allocator, "bool", .{}),
+            .VOID => try std.fmt.allocPrint(self.allocator, "void", .{}),
+            .ARRAY => try data_type.toCName(self.allocator),
+        };
+    }
+
+    fn generateArrayStruct(self: *CodeGenerator, array_type: DataType) !void {
+        switch (array_type) {
+            .ARRAY => |arr_type| {
+                const elem_type_c = try self.mapTypeToC(arr_type.element_type.*);
+                defer self.allocator.free(elem_type_c);
+
+                const struct_name = try array_type.toCName(self.allocator);
+                defer self.allocator.free(struct_name);
+
+                // typedef struct { ... } Array_int;
+                try self.write("typedef struct {\n");
+                try self.write("    ");
+                try self.write(elem_type_c);
+                try self.write("* data;\n");
+                try self.write("    size_t length;\n");
+                try self.write("    size_t capacity;\n");
+                try self.write("} ");
+                try self.write(struct_name);
+                try self.write(";\n\n");
+            },
+            else => {},
+        }
+    }
+
+    fn generateArrayHelpers(self: *CodeGenerator, struct_name: []const u8, elem_type: []const u8) !void {
+        // Array_int_create(size_t initial_capacity)
+        try self.write(struct_name);
+        try self.write(" ");
+        try self.write(struct_name);
+        try self.write("_create(size_t initial_capacity) {\n");
+        try self.write("    ");
+        try self.write(struct_name);
+        try self.write(" arr = {0};\n");
+        try self.write("    arr.capacity = initial_capacity > 0 ? initial_capacity : 4;\n");
+        try self.write("    arr.data = (");
+        try self.write(elem_type);
+        try self.write("*)malloc(arr.capacity * sizeof(");
+        try self.write(elem_type);
+        try self.write("));\n");
+        try self.write("    arr.length = 0;\n");
+        try self.write("    return arr;\n");
+        try self.write("}\n\n");
+
+        // Array_int_push(Array_int* arr, long long value)
+        try self.write("void ");
+        try self.write(struct_name);
+        try self.write("_push(");
+        try self.write(struct_name);
+        try self.write("* arr, ");
+        try self.write(elem_type);
+        try self.write(" value) {\n");
+        try self.write("    if (arr->length >= arr->capacity) {\n");
+        try self.write("        arr->capacity *= 2;\n");
+        try self.write("        arr->data = (");
+        try self.write(elem_type);
+        try self.write("*)realloc(arr->data, arr->capacity * sizeof(");
+        try self.write(elem_type);
+        try self.write("));\n");
+        try self.write("    }\n");
+        try self.write("    arr->data[arr->length++] = value;\n");
+        try self.write("}\n\n");
+
+        // Array_int_free(Array_int* arr)
+        try self.write("void ");
+        try self.write(struct_name);
+        try self.write("_free(");
+        try self.write(struct_name);
+        try self.write("* arr) {\n");
+        try self.write("    free(arr->data);\n");
+        try self.write("}\n\n");
+    }
+
+    fn getArrayDepth(data_type: DataType) usize {
+        switch (data_type) {
+            .ARRAY => |arr_type| return 1 + getArrayDepth(arr_type.element_type.*),
+            else => return 0,
+        }
+    }
+
+    fn writeArrayStructDefinitions(self: *CodeGenerator, program: *Program) !void {
+        // Collect all array types used in the program
+        try self.collectArrayTypes(program);
+
+        // Collect types into a list so we can sort them
+        var types_list: std.ArrayList(DataType) = .empty;
+        defer types_list.deinit(self.allocator);
+
+        var it = self.array_types_seen.iterator();
+        while (it.next()) |entry| {
+            try types_list.append(self.allocator, entry.value_ptr.*);
+        }
+
+        // Sort by depth (simple types first, nested types later)
+        // Bubble sort is fine for small lists
+        if (types_list.items.len > 1) {
+            var i: usize = 0;
+            while (i < types_list.items.len - 1) : (i += 1) {
+                var j: usize = 0;
+                while (j < types_list.items.len - 1 - i) : (j += 1) {
+                    const depth_j = getArrayDepth(types_list.items[j]);
+                    const depth_j1 = getArrayDepth(types_list.items[j + 1]);
+                    if (depth_j > depth_j1) {
+                        const temp = types_list.items[j];
+                        types_list.items[j] = types_list.items[j + 1];
+                        types_list.items[j + 1] = temp;
+                    }
+                }
+            }
+        }
+
+        // Generate struct definition and helpers for each type in sorted order
+        for (types_list.items) |array_type| {
+            // Generate struct definition
+            try self.generateArrayStruct(array_type);
+
+            // Generate helper functions
+            switch (array_type) {
+                .ARRAY => |arr_type| {
+                    const elem_type_c = try self.mapTypeToC(arr_type.element_type.*);
+                    defer self.allocator.free(elem_type_c);
+
+                    const struct_name = try array_type.toCName(self.allocator);
+                    defer self.allocator.free(struct_name);
+
+                    try self.generateArrayHelpers(struct_name, elem_type_c);
+                },
+                else => {},
+            }
+        }
+
+        try self.write("\n");
+    }
+
     fn generateStmt(self: *CodeGenerator, stmt: *const Stmt) CodeGenError!void {
         switch (stmt.*) {
             .variable_decl => |decl| {
@@ -86,7 +372,100 @@ pub const CodeGenerator = struct {
 
                 try self.writeIndent();
 
-                // Write type (const if sealed)
+                // Special handling for arrays with array literals
+                if (decl.data_type == .ARRAY and decl.value == .array_literal) {
+                    const arr = decl.value.array_literal;
+
+                    // Write type and name
+                    if (decl.is_const) {
+                        try self.write("const ");
+                    }
+                    const type_c = try self.mapTypeToC(decl.data_type);
+                    defer self.allocator.free(type_c);
+                    try self.write(type_c);
+                    try self.write(" ");
+                    try self.write(decl.name);
+                    try self.write(" = ");
+
+                    // Generate: Array_int_create(capacity)
+                    const struct_name = try decl.data_type.toCName(self.allocator);
+                    defer self.allocator.free(struct_name);
+                    try self.write(struct_name);
+                    try self.write("_create(");
+                    const cap_str = try std.fmt.allocPrint(self.allocator, "{d}", .{arr.elements.len});
+                    defer self.allocator.free(cap_str);
+                    try self.write(cap_str);
+                    try self.write(");\n");
+
+                    // Generate: Array_int_push(&arr, elem) for each element
+                    for (arr.elements) |*elem| {
+                        // Special handling for nested array literals
+                        if (elem.* == .array_literal) {
+                            const nested_arr = elem.array_literal;
+
+                            // Generate temporary array for nested literal
+                            try self.writeIndent();
+
+                            // Get the element type (which is also an array)
+                            const elem_type = switch (decl.data_type) {
+                                .ARRAY => |arr_t| arr_t.element_type.*,
+                                else => return CodeGenError.InvalidExpression,
+                            };
+
+                            const elem_type_c = try self.mapTypeToC(elem_type);
+                            defer self.allocator.free(elem_type_c);
+
+                            const temp_name = try std.fmt.allocPrint(self.allocator, "temp_{d}", .{self.temp_counter});
+                            self.temp_counter += 1;
+                            defer self.allocator.free(temp_name);
+
+                            // Generate: Array_int temp_0 = Array_int_create(3);
+                            try self.write(elem_type_c);
+                            try self.write(" ");
+                            try self.write(temp_name);
+                            try self.write(" = ");
+                            try self.write(elem_type_c);
+                            try self.write("_create(");
+                            const nested_cap_str = try std.fmt.allocPrint(self.allocator, "{d}", .{nested_arr.elements.len});
+                            defer self.allocator.free(nested_cap_str);
+                            try self.write(nested_cap_str);
+                            try self.write(");\n");
+
+                            // Generate pushes for nested elements
+                            for (nested_arr.elements) |*nested_elem| {
+                                try self.writeIndent();
+                                try self.write(elem_type_c);
+                                try self.write("_push(&");
+                                try self.write(temp_name);
+                                try self.write(", ");
+                                try self.generateExpr(nested_elem);
+                                try self.write(");\n");
+                            }
+
+                            // Generate push of temporary to parent array
+                            try self.writeIndent();
+                            try self.write(struct_name);
+                            try self.write("_push(&");
+                            try self.write(decl.name);
+                            try self.write(", ");
+                            try self.write(temp_name);
+                            try self.write(");\n");
+                        } else {
+                            // Normal element
+                            try self.writeIndent();
+                            try self.write(struct_name);
+                            try self.write("_push(&");
+                            try self.write(decl.name);
+                            try self.write(", ");
+                            try self.generateExpr(elem);
+                            try self.write(");\n");
+                        }
+                    }
+
+                    return;
+                }
+
+                // Normal variable declaration
                 if (decl.is_const) {
                     try self.write("const ");
                 }
@@ -196,6 +575,53 @@ pub const CodeGenerator = struct {
                 }
                 self.indent_level -= 1;
 
+                try self.writeIndent();
+                try self.write("}\n");
+            },
+            .for_in_stmt => |for_in| {
+                // Generate: for (size_t __i_item = 0; __i_item < arr.length; __i_item++) {
+                //              int item = arr.data[__i_item];
+                //              ...body...
+                //           }
+                try self.writeIndent();
+                try self.write("for (size_t __i_");
+                try self.write(for_in.iterator);
+                try self.write(" = 0; __i_");
+                try self.write(for_in.iterator);
+                try self.write(" < ");
+                try self.generateExpr(&for_in.iterable);
+                try self.write(".length; __i_");
+                try self.write(for_in.iterator);
+                try self.write("++) {\n");
+
+                self.indent_level += 1;
+
+                // Declare iterator variable
+                try self.writeIndent();
+                const iter_type = for_in.iterator_type orelse return CodeGenError.InvalidExpression;
+                const type_c = try self.mapTypeToC(iter_type);
+                defer self.allocator.free(type_c);
+                try self.write(type_c);
+                try self.write(" ");
+                try self.write(for_in.iterator);
+                try self.write(" = ");
+                try self.generateExpr(&for_in.iterable);
+                try self.write(".data[__i_");
+                try self.write(for_in.iterator);
+                try self.write("];\n");
+
+                // Register iterator in variable_types for generatePrint
+                try self.variable_types.put(for_in.iterator, iter_type);
+
+                // Generate body
+                for (for_in.body) |*s| {
+                    try self.generateStmt(s);
+                }
+
+                // Remove iterator from variable_types
+                _ = self.variable_types.remove(for_in.iterator);
+
+                self.indent_level -= 1;
                 try self.writeIndent();
                 try self.write("}\n");
             },
@@ -314,21 +740,73 @@ pub const CodeGenerator = struct {
                 try self.write(")");
             },
             .array_literal => {
-                // TODO: Implement in Phase 5
-                try self.write("/* array literal */");
+                // Array literals are handled in variable_decl
+                // If we get here, it's likely an error
+                try self.write("/* array literal - should be handled in variable_decl */");
             },
-            .index_access => {
-                // TODO: Implement in Phase 5
-                try self.write("/* index access */");
+            .index_access => |idx| {
+                // Generate: arr.data[index]
+                try self.generateExpr(&idx.array);
+                try self.write(".data[");
+                try self.generateExpr(&idx.index);
+                try self.write("]");
             },
-            .member_access => {
-                // TODO: Implement in Phase 5
-                try self.write("/* member access */");
+            .member_access => |mem| {
+                // Only .length is supported
+                if (std.mem.eql(u8, mem.member, "length")) {
+                    try self.generateExpr(&mem.object);
+                    try self.write(".length");
+                } else {
+                    return CodeGenError.UnsupportedOperation;
+                }
             },
-            .method_call => {
-                // TODO: Implement in Phase 5
-                try self.write("/* method call */");
+            .method_call => |meth| {
+                // Only .push() is supported
+                if (std.mem.eql(u8, meth.method, "push")) {
+                    // Need to infer the type to get the correct function name
+                    // For now, we'll use a helper function
+                    try self.generateMethodCallPush(&meth.object, &meth.args[0]);
+                } else {
+                    return CodeGenError.UnsupportedOperation;
+                }
             },
+        }
+    }
+
+    fn generateMethodCallPush(self: *CodeGenerator, object: *const Expr, arg: *const Expr) !void {
+        // Infer the type of the object to get the struct name
+        const obj_type = try self.inferExprType(object);
+        const struct_name = try obj_type.toCName(self.allocator);
+        defer self.allocator.free(struct_name);
+
+        // Generate: Array_int_push(&arr, value)
+        try self.write(struct_name);
+        try self.write("_push(&");
+        try self.generateExpr(object);
+        try self.write(", ");
+        try self.generateExpr(arg);
+        try self.write(")");
+    }
+
+    fn inferExprType(self: *CodeGenerator, expr: *const Expr) CodeGenError!DataType {
+        switch (expr.*) {
+            .identifier => |name| {
+                // Look up the variable type from our symbol table
+                if (self.variable_types.get(name)) |var_type| {
+                    return var_type;
+                } else {
+                    return CodeGenError.InvalidExpression;
+                }
+            },
+            .index_access => |idx| {
+                // Get the type of the array
+                const array_type = try self.inferExprType(&idx.array);
+                switch (array_type) {
+                    .ARRAY => |arr_type| return arr_type.element_type.*,
+                    else => return CodeGenError.InvalidExpression,
+                }
+            },
+            else => return CodeGenError.UnsupportedOperation,
         }
     }
 

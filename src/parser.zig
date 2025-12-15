@@ -137,7 +137,17 @@ pub const Parser = struct {
             .LET, .CONST => self.parseVariableDecl(),
             .IF => self.parseIfStatement(),
             .WHILE => self.parseWhileStatement(),
-            .FOR => self.parseForStatement(),
+            .FOR => blk: {
+                // Distinguish between traditional for and for-in
+                self.nextToken(); // consume 'for'
+
+                // Check if this is for-in: "for item in arr"
+                if (self.current_token.type == .IDENTIFIER and self.peek_token.type == .IN) {
+                    break :blk self.parseForInStatement();
+                } else {
+                    break :blk self.parseForStatement();
+                }
+            },
             .RETURN => self.parseReturnStatement(),
             .PRINT => self.parsePrintStatement(),
             .FN => self.parseFunctionDecl(),
@@ -273,7 +283,7 @@ pub const Parser = struct {
     }
 
     fn parseForStatement(self: *Parser) ParseError!Stmt {
-        self.nextToken(); // consume 'for'
+        // 'for' has already been consumed in parseStatement
 
         // Parse init - special case for variable declaration without 'make'
         const init_stmt = try self.allocator.create(Stmt);
@@ -347,6 +357,45 @@ pub const Parser = struct {
         self.nextToken(); // consume '}'
 
         return Stmt{ .for_stmt = for_stmt };
+    }
+
+    fn parseForInStatement(self: *Parser) ParseError!Stmt {
+        // 'for' has already been consumed
+        // Current token should be the iterator variable name
+
+        if (self.current_token.type != .IDENTIFIER) {
+            return ParseError.UnexpectedToken;
+        }
+        const iterator = self.current_token.lexeme;
+        self.nextToken(); // consume iterator name
+
+        if (self.current_token.type != .IN) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume 'in'
+
+        // Parse iterable expression
+        const iterable = try self.parseExpression(0);
+
+        // After parseExpression, current_token should be at LBRACE
+        if (self.current_token.type != .LBRACE) {
+            return ParseError.UnexpectedToken;
+        }
+        self.nextToken(); // consume '{'
+
+        const body = try self.parseBlock();
+
+        const for_in_stmt = try self.allocator.create(Stmt.ForInStmt);
+        for_in_stmt.* = .{
+            .iterator = iterator,
+            .iterator_type = null, // Will be filled in by analyzer
+            .iterable = iterable,
+            .body = body,
+        };
+
+        self.nextToken(); // consume '}'
+
+        return Stmt{ .for_in_stmt = for_in_stmt };
     }
 
     fn parseReturnStatement(self: *Parser) ParseError!Stmt {

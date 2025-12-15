@@ -215,6 +215,7 @@ pub const Stmt = union(enum) {
     if_stmt: *IfStmt,
     while_stmt: *WhileStmt,
     for_stmt: *ForStmt,
+    for_in_stmt: *ForInStmt,
     return_stmt: *ReturnStmt,
     expr_stmt: Expr,
     print_stmt: Expr,
@@ -248,6 +249,13 @@ pub const Stmt = union(enum) {
         init: ?*Stmt,
         condition: Expr,
         update: ?*Stmt,
+        body: []Stmt,
+    };
+
+    pub const ForInStmt = struct {
+        iterator: []const u8,
+        iterator_type: ?DataType,
+        iterable: Expr,
         body: []Stmt,
     };
 
@@ -312,6 +320,14 @@ pub const Stmt = union(enum) {
                 }
                 allocator.free(for_s.body);
                 allocator.destroy(for_s);
+            },
+            .for_in_stmt => |for_in| {
+                for_in.iterable.deinit(allocator);
+                for (for_in.body) |*stmt| {
+                    stmt.deinit(allocator);
+                }
+                allocator.free(for_in.body);
+                allocator.destroy(for_in);
             },
             .return_stmt => |ret| {
                 if (ret.value) |*val| {

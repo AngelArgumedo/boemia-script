@@ -1,0 +1,54 @@
+// Test completo de funcionalidad de arrays
+
+// Test 1: Arrays básicos de diferentes tipos
+let enteros: [int] = [1, 2, 3, 4, 5];
+let flotantes: [float] = [1.1, 2.2, 3.3];
+let textos: [string] = ["Hola", "Mundo", "Boemia"];
+
+// Test 2: Index access
+let primero: int = enteros[0];
+let ultimo: int = enteros[4];
+print(primero);
+print(ultimo);
+
+// Test 3: Member access (.length)
+let cantidad: int = enteros.length;
+let num_textos: int = textos.length;
+print(cantidad);
+print(num_textos);
+
+// Test 4: Method calls (.push)
+enteros.push(6);
+enteros.push(7);
+let nueva_cantidad: int = enteros.length;
+print(nueva_cantidad);
+
+// Test 5: Operaciones combinadas
+let idx: int = 2;
+let valor_en_idx: int = enteros[idx];
+print(valor_en_idx);
+
+textos.push("Script");
+let primer_texto: string = textos[0];
+print(primer_texto);
+
+// Test 6: For-in loops
+for num in enteros {
+    print(num);
+}
+
+for texto in textos {
+    print(texto);
+}
+
+// Test 7: Arrays con push incremental
+let dinamico: [int] = [10];
+dinamico.push(20);
+dinamico.push(30);
+dinamico.push(40);
+
+for d in dinamico {
+    print(d);
+}
+
+print(dinamico.length);
