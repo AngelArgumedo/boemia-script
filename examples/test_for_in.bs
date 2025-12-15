@@ -1,0 +1,24 @@
+// Test de for-in loops - Fase 6
+
+// Test básico con array de enteros
+let numeros: [int] = [10, 20, 30, 40, 50];
+
+for n in numeros {
+    print(n);
+}
+
+// Test con array de strings
+let nombres: [string] = ["Ana", "Bob", "Carlos"];
+
+for nombre in nombres {
+    print(nombre);
+}
+
+// Test con array creado dinámicamente
+let valores: [int] = [1, 2, 3];
+valores.push(4);
+valores.push(5);
+
+for v in valores {
+    print(v);
+}

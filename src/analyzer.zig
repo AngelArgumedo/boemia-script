@@ -99,9 +99,7 @@ pub const Analyzer = struct {
                 // Check type compatibility
                 if (!self.typesEqual(expr_type, decl.data_type)) {
                     const expr_type_str = try expr_type.toString(self.allocator);
-                    defer self.allocator.free(expr_type_str);
                     const decl_type_str = try decl.data_type.toString(self.allocator);
-                    defer self.allocator.free(decl_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "Type mismatch: cannot assign {s} to {s}",
@@ -140,9 +138,7 @@ pub const Analyzer = struct {
                 const expr_type = try self.checkExpr(&assign.value);
                 if (!self.typesEqual(expr_type, symbol.data_type)) {
                     const expr_type_str = try expr_type.toString(self.allocator);
-                    defer self.allocator.free(expr_type_str);
                     const symbol_type_str = try symbol.data_type.toString(self.allocator);
-                    defer self.allocator.free(symbol_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "Type mismatch: cannot assign {s} to {s}",
@@ -156,7 +152,6 @@ pub const Analyzer = struct {
                 const cond_type = try self.checkExpr(&if_stmt.condition);
                 if (cond_type != .BOOL) {
                     const cond_type_str = try cond_type.toString(self.allocator);
-                    defer self.allocator.free(cond_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "If condition must be bool, got {s}",
@@ -216,7 +211,6 @@ pub const Analyzer = struct {
                 const cond_type = try self.checkExpr(&while_stmt.condition);
                 if (cond_type != .BOOL) {
                     const cond_type_str = try cond_type.toString(self.allocator);
-                    defer self.allocator.free(cond_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "While condition must be bool, got {s}",
@@ -238,7 +232,6 @@ pub const Analyzer = struct {
                 const cond_type = try self.checkExpr(&for_stmt.condition);
                 if (cond_type != .BOOL) {
                     const cond_type_str = try cond_type.toString(self.allocator);
-                    defer self.allocator.free(cond_type_str);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "For condition must be bool, got {s}",
@@ -254,6 +247,44 @@ pub const Analyzer = struct {
 
                 for (for_stmt.body) |*s| {
                     try self.analyzeStmt(s);
+                }
+            },
+            .for_in_stmt => |for_in| {
+                // Get type of iterable
+                const iterable_type = try self.checkExpr(&for_in.iterable);
+
+                // Iterable must be an array
+                switch (iterable_type) {
+                    .ARRAY => |arr_type| {
+                        // Register iterator variable with element type
+                        const elem_type = arr_type.element_type.*;
+
+                        // Store the iterator type in the AST for codegen
+                        for_in.iterator_type = elem_type;
+
+                        try self.symbol_table.put(for_in.iterator, Symbol{
+                            .data_type = elem_type,
+                            .is_const = true, // Iterator is read-only
+                        });
+
+                        // Analyze body
+                        for (for_in.body) |*s| {
+                            try self.analyzeStmt(s);
+                        }
+
+                        // Remove iterator from symbol table
+                        _ = self.symbol_table.remove(for_in.iterator);
+                    },
+                    else => {
+                        const iter_type_str = try iterable_type.toString(self.allocator);
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "For-in iterable must be an array, got {s}",
+                            .{iter_type_str},
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.TypeMismatch;
+                    },
                 }
             },
             .return_stmt => |ret_stmt| {
@@ -337,9 +368,7 @@ pub const Analyzer = struct {
                             break :blk .STRING;
                         } else {
                             const left_type_str = try left_type.toString(self.allocator);
-                            defer self.allocator.free(left_type_str);
                             const right_type_str = try right_type.toString(self.allocator);
-                            defer self.allocator.free(right_type_str);
                             const err = try std.fmt.allocPrint(
                                 self.allocator,
                                 "Invalid operation: {s} {s} {s}",
@@ -353,9 +382,7 @@ pub const Analyzer = struct {
                         // Comparison operations
                         if (!self.typesEqual(left_type, right_type)) {
                             const left_type_str = try left_type.toString(self.allocator);
-                            defer self.allocator.free(left_type_str);
                             const right_type_str = try right_type.toString(self.allocator);
-                            defer self.allocator.free(right_type_str);
                             const err = try std.fmt.allocPrint(
                                 self.allocator,
                                 "Cannot compare {s} with {s}",
@@ -415,9 +442,7 @@ pub const Analyzer = struct {
                     const arg_type = try self.checkExpr(arg);
                     if (!self.typesEqual(arg_type, func_sig.param_types[i])) {
                         const expected_type_str = try func_sig.param_types[i].toString(self.allocator);
-                        defer self.allocator.free(expected_type_str);
                         const arg_type_str = try arg_type.toString(self.allocator);
-                        defer self.allocator.free(arg_type_str);
                         const err = try std.fmt.allocPrint(
                             self.allocator,
                             "Type mismatch in argument {d} of function '{s}': expected {s}, got {s}",
@@ -431,21 +456,166 @@ pub const Analyzer = struct {
                 // Return the function's return type
                 break :blk func_sig.return_type;
             },
-            .array_literal => {
-                // TODO: Implement in Phase 4
-                return AnalyzerError.InvalidOperation;
+            .array_literal => |arr| blk: {
+                // Array vacio necesita anotacion de tipo explícita
+                if (arr.elements.len == 0) {
+                    const err = try std.fmt.allocPrint(
+                        self.allocator,
+                        "Empty array literals require type annotation",
+                        .{},
+                    );
+                    try self.errors.append(self.allocator, err);
+                    return AnalyzerError.TypeMismatch;
+                }
+
+                // Inferir tipo del primer elemento
+                const first_type = try self.checkExpr(&arr.elements[0]);
+
+                // Verificar que todos los elementos sean del mismo tipo
+                for (arr.elements[1..]) |*elem| {
+                    const elem_type = try self.checkExpr(elem);
+                    if (!self.typesEqual(elem_type, first_type)) {
+                        // Note: We don't free these strings because simple types return string literals
+                        // Only ARRAY types allocate memory, but those will be freed when Program.deinit() is called
+                        const first_type_str = try first_type.toString(self.allocator);
+                        const elem_type_str = try elem_type.toString(self.allocator);
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Array elements must have the same type: expected {s}, got {s}",
+                            .{ first_type_str, elem_type_str },
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.TypeMismatch;
+                    }
+                }
+
+                // Crear tipo [T]
+                const elem_type_ptr = try self.allocator.create(DataType);
+                elem_type_ptr.* = first_type;
+
+                const array_type = try self.allocator.create(DataType.ArrayType);
+                array_type.* = .{
+                    .element_type = elem_type_ptr,
+                    .allocator = self.allocator,
+                };
+
+                break :blk DataType{ .ARRAY = array_type };
             },
-            .index_access => {
-                // TODO: Implement in Phase 4
-                return AnalyzerError.InvalidOperation;
+            .index_access => |idx| blk: {
+                const array_type = try self.checkExpr(&idx.array);
+                const index_type = try self.checkExpr(&idx.index);
+
+                // El índice debe ser int
+                if (index_type != .INT) {
+                    const index_type_str = try index_type.toString(self.allocator);
+                    const err = try std.fmt.allocPrint(
+                        self.allocator,
+                        "Array index must be int, got {s}",
+                        .{index_type_str},
+                    );
+                    try self.errors.append(self.allocator, err);
+                    return AnalyzerError.TypeMismatch;
+                }
+
+                // array_type debe ser ARRAY
+                switch (array_type) {
+                    .ARRAY => |arr_type| break :blk arr_type.element_type.*,
+                    else => {
+                        const arr_type_str = try array_type.toString(self.allocator);
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Cannot index into non-array type {s}",
+                            .{arr_type_str},
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.TypeMismatch;
+                    },
+                }
             },
-            .member_access => {
-                // TODO: Implement in Phase 4
-                return AnalyzerError.InvalidOperation;
+            .member_access => |mem| blk: {
+                const object_type = try self.checkExpr(&mem.object);
+
+                switch (object_type) {
+                    .ARRAY => {
+                        // Solo soportamos .length por ahora
+                        if (std.mem.eql(u8, mem.member, "length")) {
+                            break :blk DataType.INT;
+                        } else {
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Unknown array property '{s}' (only 'length' is supported)",
+                                .{mem.member},
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return AnalyzerError.InvalidOperation;
+                        }
+                    },
+                    else => {
+                        const obj_type_str = try object_type.toString(self.allocator);
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Type {s} does not have property '{s}'",
+                            .{ obj_type_str, mem.member },
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.InvalidOperation;
+                    },
+                }
             },
-            .method_call => {
-                // TODO: Implement in Phase 4
-                return AnalyzerError.InvalidOperation;
+            .method_call => |meth| blk: {
+                const object_type = try self.checkExpr(&meth.object);
+
+                switch (object_type) {
+                    .ARRAY => |arr_type| {
+                        // Solo soportamos .push() por ahora
+                        if (std.mem.eql(u8, meth.method, "push")) {
+                            // Verificar 1 argumento
+                            if (meth.args.len != 1) {
+                                const err = try std.fmt.allocPrint(
+                                    self.allocator,
+                                    "Method 'push' expects 1 argument, got {d}",
+                                    .{meth.args.len},
+                                );
+                                try self.errors.append(self.allocator, err);
+                                return AnalyzerError.TypeMismatch;
+                            }
+
+                            // Verificar tipo del argumento
+                            const arg_type = try self.checkExpr(&meth.args[0]);
+                            if (!self.typesEqual(arg_type, arr_type.element_type.*)) {
+                                const expected_type_str = try arr_type.element_type.toString(self.allocator);
+                                const arg_type_str = try arg_type.toString(self.allocator);
+                                const err = try std.fmt.allocPrint(
+                                    self.allocator,
+                                    "Method 'push' expects argument of type {s}, got {s}",
+                                    .{ expected_type_str, arg_type_str },
+                                );
+                                try self.errors.append(self.allocator, err);
+                                return AnalyzerError.TypeMismatch;
+                            }
+
+                            break :blk DataType.VOID;
+                        } else {
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Unknown array method '{s}' (only 'push' is supported)",
+                                .{meth.method},
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return AnalyzerError.InvalidOperation;
+                        }
+                    },
+                    else => {
+                        const obj_type_str = try object_type.toString(self.allocator);
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Type {s} does not have method '{s}'",
+                            .{ obj_type_str, meth.method },
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.InvalidOperation;
+                    },
+                }
             },
         };
     }

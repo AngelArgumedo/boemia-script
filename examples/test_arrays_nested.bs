@@ -1,0 +1,46 @@
+// Test de arrays anidados
+
+// Test 1: Matrices 2D
+let matrix: [[int]] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+
+// Acceso individual
+let elem_0_0: int = matrix[0][0];
+let elem_1_2: int = matrix[1][2];
+let elem_2_1: int = matrix[2][1];
+
+print(elem_0_0);
+print(elem_1_2);
+print(elem_2_1);
+
+// Test 2: Array de arrays de strings
+let palabras: [[string]] = [["Hola", "Mundo"], ["Boemia", "Script"]];
+
+let primera_palabra: string = palabras[0][0];
+let ultima_palabra: string = palabras[1][1];
+
+print(primera_palabra);
+print(ultima_palabra);
+
+// Test 3: Iterar sobre matriz
+for fila in matrix {
+    for elemento in fila {
+        print(elemento);
+    }
+}
+
+// Test 4: Longitud de filas
+let num_filas: int = matrix.length;
+let num_cols: int = matrix[0].length;
+
+print(num_filas);
+print(num_cols);
+
+// Test 5: Modificar matriz con push
+let nueva_fila: [int] = [10, 11, 12];
+matrix.push(nueva_fila);
+
+let nuevo_num_filas: int = matrix.length;
+print(nuevo_num_filas);
+
+let nuevo_elemento: int = matrix[3][1];
+print(nuevo_elemento);
