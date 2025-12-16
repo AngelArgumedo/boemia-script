@@ -8,6 +8,7 @@
 # Boemia Script
 
 Un lenguaje de programación compilado, con tipos estáticos, diseñado para aprender cómo funcionan los compiladores e intérpretes desde cero.
+![Banner](documentation/boemia-banner.jpeg)
 
 ## Estado del Proyecto: FUNCIONAL
 
