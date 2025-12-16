@@ -28,6 +28,7 @@ Esta documentacion proporciona una guia completa y detallada sobre el compilador
 - [10 - Sintaxis del Lenguaje](10-SYNTAX.md)
 - [11 - Estructuras de Control](11-CONTROL-STRUCTURES.md)
 - [12 - Funciones y Scope](12-FUNCTIONS-SCOPE.md)
+- [25 - Arrays Dinamicos](25-ARRAYS.md)
 
 #### IV. Implementacion Tecnica
 
@@ -79,6 +80,7 @@ graph TB
     LANGUAGE --> J[10-SYNTAX]
     LANGUAGE --> K[11-CONTROL]
     LANGUAGE --> L[12-FUNCTIONS]
+    LANGUAGE --> Z[25-ARRAYS]
 
     IMPL --> M[13-AST]
     IMPL --> N[14-ERRORS]
@@ -179,8 +181,9 @@ Esta documentacion utiliza Mermaid para diagramas visuales. Los diagramas son in
 ## Version de la Documentacion
 
 - Version del Proyecto: 1.0
-- Fecha de Actualizacion: 2025-12-10
+- Fecha de Actualizacion: 2025-12-16
 - Estado: Funcional y Operativo
+- Ultima Actualizacion: Agregada documentacion de Arrays Dinamicos (25-ARRAYS.md)
 
 ## Licencia
 
