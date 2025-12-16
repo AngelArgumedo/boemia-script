@@ -6,7 +6,7 @@ const ast = @import("ast.zig");
 
 test "parser: parse variable declaration" {
     const allocator = testing.allocator;
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
 
     var lexer = Lexer.init(allocator, source);
     var parser = try Parser.init(allocator, &lexer);
@@ -30,7 +30,7 @@ test "parser: parse variable declaration" {
 
 test "parser: parse constant declaration" {
     const allocator = testing.allocator;
-    const source = "seal PI: float = 3.14;";
+    const source = "const PI: float = 3.14;";
 
     var lexer = Lexer.init(allocator, source);
     var parser = try Parser.init(allocator, &lexer);
@@ -48,7 +48,7 @@ test "parser: parse constant declaration" {
 
 test "parser: parse string literal" {
     const allocator = testing.allocator;
-    const source = "make msg: string = \"Hello\";";
+    const source = "let msg: string = \"Hello\";";
 
     var lexer = Lexer.init(allocator, source);
     var parser = try Parser.init(allocator, &lexer);
@@ -67,7 +67,7 @@ test "parser: parse string literal" {
 
 test "parser: parse binary expression" {
     const allocator = testing.allocator;
-    const source = "make result: int = 5 + 3;";
+    const source = "let result: int = 5 + 3;";
 
     var lexer = Lexer.init(allocator, source);
     var parser = try Parser.init(allocator, &lexer);
@@ -90,7 +90,7 @@ test "parser: parse if statement" {
     const allocator = testing.allocator;
     const source =
         \\if x > 5 {
-        \\    make y: int = 10;
+        \\    let y: int = 10;
         \\}
     ;
 
@@ -115,9 +115,9 @@ test "parser: parse if-else statement" {
     const allocator = testing.allocator;
     const source =
         \\if x > 5 {
-        \\    make y: int = 10;
+        \\    let y: int = 10;
         \\} else {
-        \\    make y: int = 20;
+        \\    let y: int = 20;
         \\}
     ;
 
@@ -196,9 +196,9 @@ test "parser: parse assignment" {
 test "parser: parse multiple statements" {
     const allocator = testing.allocator;
     const source =
-        \\make x: int = 5;
-        \\make y: int = 10;
-        \\make sum: int = x + y;
+        \\let x: int = 5;
+        \\let y: int = 10;
+        \\let sum: int = x + y;
     ;
 
     var lexer = Lexer.init(allocator, source);
@@ -214,12 +214,12 @@ test "parser: parse multiple statements" {
 test "parser: parse comparison operators" {
     const allocator = testing.allocator;
     const operators = [_]struct { src: []const u8, op: ast.BinaryOp }{
-        .{ .src = "make a: bool = x == y;", .op = .EQ },
-        .{ .src = "make b: bool = x != y;", .op = .NEQ },
-        .{ .src = "make c: bool = x < y;", .op = .LT },
-        .{ .src = "make d: bool = x > y;", .op = .GT },
-        .{ .src = "make e: bool = x <= y;", .op = .LTE },
-        .{ .src = "make f: bool = x >= y;", .op = .GTE },
+        .{ .src = "let a: bool = x == y;", .op = .EQ },
+        .{ .src = "let b: bool = x != y;", .op = .NEQ },
+        .{ .src = "let c: bool = x < y;", .op = .LT },
+        .{ .src = "let d: bool = x > y;", .op = .GT },
+        .{ .src = "let e: bool = x <= y;", .op = .LTE },
+        .{ .src = "let f: bool = x >= y;", .op = .GTE },
     };
 
     for (operators) |test_case| {

@@ -297,6 +297,7 @@ pub const Parser = struct {
             }
 
             const data_type = try self.parseDataType();
+            self.nextToken(); // consume type token, move to '='
 
             if (self.current_token.type != .ASSIGN) {
                 return ParseError.UnexpectedToken;
