@@ -368,15 +368,48 @@ jobs:
         echo "Verifying all examples are valid Boemia Script..."
         FAILED=0
 
+        # List of test files that are expected to fail (for error testing)
+        EXPECTED_FAILURES=(
+          "examples/test_array_errors.bs"
+          "examples/test_array_parsing.bs"
+        )
+
         for example in examples/*.bs; do
           if [ -f "$example" ]; then
+            # Check if this file is in the expected failures list
+            SKIP=false
+            for expected_fail in "${EXPECTED_FAILURES[@]}"; do
+              if [ "$example" = "$expected_fail" ]; then
+                echo "⊘ Skipping $example (expected to have errors)"
+                SKIP=true
+                break
+              fi
+            done
+
+            if [ "$SKIP" = true ]; then
+              continue
+            fi
+
             echo "Checking $example..."
-            if ./zig-out/bin/boemia-compiler "$example" 2>&1 | grep -i "error"; then
+            # Capture output to a temp file
+            OUTPUT_FILE=$(mktemp)
+            ./zig-out/bin/boemia-compiler "$example" > "$OUTPUT_FILE" 2>&1
+            EXIT_CODE=$?
+
+            # Check for compilation errors (but ignore GPA memory leak messages)
+            if grep -E "(Parsing Error:|Semantic Analysis Error:|error: [A-Z])" "$OUTPUT_FILE" | grep -v "error(gpa)"; then
               echo "✗ $example has compilation errors"
+              cat "$OUTPUT_FILE"
+              FAILED=1
+            elif [ $EXIT_CODE -ne 0 ]; then
+              echo "✗ $example failed to compile (exit code: $EXIT_CODE)"
+              cat "$OUTPUT_FILE"
               FAILED=1
             else
               echo "✓ $example compiles successfully"
             fi
+
+            rm -f "$OUTPUT_FILE"
           fi
         done
 

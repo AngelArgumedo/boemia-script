@@ -461,6 +461,7 @@ pub const Parser = struct {
             try self.expectToken(.COLON); // verifies peek is COLON, then advances
 
             const param_type = try self.parseDataType();
+            self.nextToken(); // consume type token, move to ',' or ')'
 
             try params.append(self.allocator, .{ .name = param_name, .data_type = param_type });
 
@@ -477,6 +478,7 @@ pub const Parser = struct {
         }
 
         const return_type = try self.parseDataType();
+        self.nextToken(); // consume return type token, move to '{'
 
         if (self.current_token.type != .LBRACE) {
             return ParseError.UnexpectedToken;
