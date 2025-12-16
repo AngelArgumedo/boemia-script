@@ -22,6 +22,7 @@ pub const CodeGenerator = struct {
     variable_types: std.StringHashMap(DataType),
     array_types_seen: std.StringHashMap(DataType),
     temp_counter: usize,
+    array_variables: std.ArrayList([]const u8),
 
     pub fn init(allocator: std.mem.Allocator) CodeGenerator {
         return CodeGenerator{
@@ -32,6 +33,7 @@ pub const CodeGenerator = struct {
             .variable_types = std.StringHashMap(DataType).init(allocator),
             .array_types_seen = std.StringHashMap(DataType).init(allocator),
             .temp_counter = 0,
+            .array_variables = .empty,
         };
     }
 
@@ -40,6 +42,7 @@ pub const CodeGenerator = struct {
         self.string_literals.deinit(self.allocator);
         self.variable_types.deinit();
         self.array_types_seen.deinit();
+        self.array_variables.deinit(self.allocator);
     }
 
     pub fn generate(self: *CodeGenerator, program: *Program) ![]const u8 {
@@ -66,6 +69,20 @@ pub const CodeGenerator = struct {
             if (stmt.* != .function_decl) {
                 try self.generateStmt(stmt);
             }
+        }
+
+        // Cleanup: Free all array memory before return
+        for (self.array_variables.items) |var_name| {
+            try self.writeIndent();
+            // Get the type of the variable to construct the correct free function name
+            const var_type = self.variable_types.get(var_name) orelse continue;
+            const struct_name = try var_type.toCName(self.allocator);
+            defer self.allocator.free(struct_name);
+
+            try self.write(struct_name);
+            try self.write("_free(&");
+            try self.write(var_name);
+            try self.write(");\n");
         }
 
         // Return 0 from main
@@ -255,7 +272,7 @@ pub const CodeGenerator = struct {
         }
     }
 
-    fn generateArrayHelpers(self: *CodeGenerator, struct_name: []const u8, elem_type: []const u8) !void {
+    fn generateArrayHelpers(self: *CodeGenerator, struct_name: []const u8, elem_type: []const u8, elem_data_type: DataType) !void {
         // Array_int_create(size_t initial_capacity)
         try self.write(struct_name);
         try self.write(" ");
@@ -290,7 +307,25 @@ pub const CodeGenerator = struct {
         try self.write(elem_type);
         try self.write("));\n");
         try self.write("    }\n");
-        try self.write("    arr->data[arr->length++] = value;\n");
+
+        // For nested arrays, create a deep copy instead of just copying the struct
+        if (elem_data_type == .ARRAY) {
+            try self.write("    // Deep copy for nested array\n");
+            try self.write("    ");
+            try self.write(elem_type);
+            try self.write(" copy = ");
+            try self.write(elem_type);
+            try self.write("_create(value.capacity);\n");
+            try self.write("    for (size_t i = 0; i < value.length; i++) {\n");
+            try self.write("        ");
+            try self.write(elem_type);
+            try self.write("_push(&copy, value.data[i]);\n");
+            try self.write("    }\n");
+            try self.write("    arr->data[arr->length++] = copy;\n");
+        } else {
+            try self.write("    arr->data[arr->length++] = value;\n");
+        }
+
         try self.write("}\n\n");
 
         // Array_int_free(Array_int* arr)
@@ -299,6 +334,16 @@ pub const CodeGenerator = struct {
         try self.write("_free(");
         try self.write(struct_name);
         try self.write("* arr) {\n");
+
+        // Recursively free nested arrays if element type is an array
+        if (elem_data_type == .ARRAY) {
+            try self.write("    for (size_t i = 0; i < arr->length; i++) {\n");
+            try self.write("        ");
+            try self.write(elem_type);
+            try self.write("_free(&arr->data[i]);\n");
+            try self.write("    }\n");
+        }
+
         try self.write("    free(arr->data);\n");
         try self.write("}\n\n");
     }
@@ -355,7 +400,7 @@ pub const CodeGenerator = struct {
                     const struct_name = try array_type.toCName(self.allocator);
                     defer self.allocator.free(struct_name);
 
-                    try self.generateArrayHelpers(struct_name, elem_type_c);
+                    try self.generateArrayHelpers(struct_name, elem_type_c, arr_type.element_type.*);
                 },
                 else => {},
             }
@@ -369,6 +414,11 @@ pub const CodeGenerator = struct {
             .variable_decl => |decl| {
                 // Track variable type for later use
                 self.variable_types.put(decl.name, decl.data_type) catch return CodeGenError.OutOfMemory;
+
+                // Track array variables for cleanup
+                if (decl.data_type == .ARRAY) {
+                    try self.array_variables.append(self.allocator, decl.name);
+                }
 
                 try self.writeIndent();
 
@@ -417,6 +467,12 @@ pub const CodeGenerator = struct {
 
                             const temp_name = try std.fmt.allocPrint(self.allocator, "temp_{d}", .{self.temp_counter});
                             self.temp_counter += 1;
+
+                            // Track temporary variable for cleanup
+                            const temp_name_copy = try std.fmt.allocPrint(self.allocator, "temp_{d}", .{self.temp_counter - 1});
+                            try self.array_variables.append(self.allocator, temp_name_copy);
+                            try self.variable_types.put(temp_name_copy, elem_type);
+
                             defer self.allocator.free(temp_name);
 
                             // Generate: Array_int temp_0 = Array_int_create(3);
@@ -922,6 +978,29 @@ pub const CodeGenerator = struct {
         var i: usize = 0;
         while (i < self.indent_level) : (i += 1) {
             try self.write("    ");
+        }
+    }
+
+    fn generateArrayCleanup(self: *CodeGenerator) !void {
+        // Generate free calls for all arrays in reverse order (LIFO)
+        if (self.array_variables.items.len > 0) {
+            var i: usize = self.array_variables.items.len;
+            while (i > 0) {
+                i -= 1;
+                const var_name = self.array_variables.items[i];
+
+                // Get the type of the variable
+                if (self.variable_types.get(var_name)) |var_type| {
+                    const struct_name = try var_type.toCName(self.allocator);
+                    defer self.allocator.free(struct_name);
+
+                    try self.writeIndent();
+                    try self.write(struct_name);
+                    try self.write("_free(&");
+                    try self.write(var_name);
+                    try self.write(");\n");
+                }
+            }
         }
     }
 };
