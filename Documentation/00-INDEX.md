@@ -42,6 +42,7 @@ Esta documentacion proporciona una guia completa y detallada sobre el compilador
 - [17 - Ejemplos Practicos](17-EXAMPLES.md)
 - [18 - Sistema de Build](18-BUILD-SYSTEM.md)
 - [19 - Testing](19-TESTING.md)
+- [26 - CI/CD con GitHub Actions](26-CI-CD.md)
 
 #### VI. Referencia Tecnica
 
@@ -90,6 +91,7 @@ graph TB
     USAGE --> Q[17-EXAMPLES]
     USAGE --> R[18-BUILD]
     USAGE --> S[19-TESTING]
+    USAGE --> Y[26-CI/CD]
 
     REF --> T[20-TOKENS]
     REF --> U[21-OPERATORS]

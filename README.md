@@ -1,5 +1,6 @@
 ![Zig](https://img.shields.io/badge/Made_with-Zig-orange?logo=zig&style=flat-square)
 ![License](https://img.shields.io/github/license/AngelArgumedo/boemia-script?style=flat-square)
+![CI](https://github.com/AngelArgumedo/boemia-script/workflows/CI/badge.svg)
 ![Status](https://img.shields.io/badge/Status-Development-blue?style=flat-square)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green?style=flat-square)
 ![Contributors](https://img.shields.io/github/contributors/AngelArgumedo/boemia-script?style=flat-square)

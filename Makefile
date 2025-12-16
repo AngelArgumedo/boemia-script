@@ -1,14 +1,23 @@
 # Boemia Script Compiler - Makefile
 
-.PHONY: build test clean docker-build docker-run podman-build podman-run help
+.PHONY: build test clean test-e2e test-memory test-all docker-build docker-run podman-build podman-run help
 
 # Default target
 help:
 	@echo "Boemia Script Compiler - Available commands:"
 	@echo ""
+	@echo "  Building:"
 	@echo "  make build           - Build the compiler with Zig"
-	@echo "  make test            - Run the test suite"
+	@echo ""
+	@echo "  Testing:"
+	@echo "  make test            - Run unit tests"
+	@echo "  make test-e2e        - Run end-to-end tests"
+	@echo "  make test-memory     - Run memory leak tests"
+	@echo "  make test-all        - Run all tests (unit + e2e + memory)"
+	@echo ""
+	@echo "  Maintenance:"
 	@echo "  make clean           - Clean build artifacts"
+	@echo "  make fmt             - Format Zig source code"
 	@echo ""
 	@echo "  Docker commands:"
 	@echo "  make docker-build    - Build Docker image"
@@ -24,9 +33,28 @@ help:
 build:
 	zig build
 
-# Run tests
+# Run unit tests
 test:
 	zig build test
+
+# Run end-to-end tests
+test-e2e: build
+	@echo "Running end-to-end tests..."
+	./scripts/run_e2e_tests.sh
+
+# Run memory leak tests
+test-memory: build
+	@echo "Running memory leak tests..."
+	./scripts/check_memory_leaks.sh
+
+# Run all tests
+test-all: test test-e2e test-memory
+	@echo ""
+	@echo "All tests completed successfully!"
+
+# Format Zig source code
+fmt:
+	zig fmt src/*.zig tests/*.zig
 
 # Clean build artifacts
 clean:

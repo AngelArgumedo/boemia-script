@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Get version from tag
+      id: get_version
+      run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Boemia Script v${{ steps.get_version.outputs.version }}
+        body: |
+          # Boemia Script ${{ steps.get_version.outputs.version }}
+
+          ## Changes in this release
+
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+          ## Downloads
+
+          Download the appropriate binary for your platform below.
+
+          ## Installation
+
+          1. Download the binary for your platform
+          2. Extract the archive
+          3. Add the binary to your PATH
+          4. Run `boemia-compiler --help`
+
+          ## Documentation
+
+          - [User Guide](https://github.com/${{ github.repository }}/blob/main/Documentation/16-USER-GUIDE.md)
+          - [Documentation Index](https://github.com/${{ github.repository }}/blob/main/Documentation/00-INDEX.md)
+        draft: false
+        prerelease: false
+
+  build-and-upload:
+    name: Build & Upload - ${{ matrix.os }}
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: boemia-compiler
+            asset_name: boemia-compiler-linux-x86_64
+          - os: macos-latest
+            artifact_name: boemia-compiler
+            asset_name: boemia-compiler-macos-x86_64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: '0.15.2'
+
+    - name: Build compiler (Release)
+      run: zig build -Doptimize=ReleaseSafe
+
+    - name: Create archive (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        cd zig-out/bin
+        tar -czf ../../${{ matrix.asset_name }}.tar.gz boemia-compiler
+        cd ../..
+
+    - name: Create archive (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        cd zig-out/bin
+        tar -czf ../../${{ matrix.asset_name }}.tar.gz boemia-compiler
+        cd ../..
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.asset_name }}.tar.gz
+        asset_name: ${{ matrix.asset_name }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Generate SHA256 checksum
+      run: |
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          sha256sum ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.sha256
+        else
+          shasum -a 256 ${{ matrix.asset_name }}.tar.gz > ${{ matrix.asset_name }}.sha256
+        fi
+
+    - name: Upload checksum
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.asset_name }}.sha256
+        asset_name: ${{ matrix.asset_name }}.sha256
+        asset_content_type: text/plain

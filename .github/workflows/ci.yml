@@ -1,0 +1,416 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Job 1: Build and Unit Tests
+  build-and-test:
+    name: Build & Unit Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        zig-version: ['0.15.2']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: ${{ matrix.zig-version }}
+
+    - name: Verify Zig installation
+      run: zig version
+
+    - name: Build compiler
+      run: zig build
+
+    - name: Run unit tests
+      run: zig build test
+
+    - name: Upload compiler artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: boemia-compiler-${{ matrix.os }}
+        path: zig-out/bin/boemia-compiler
+        retention-days: 7
+
+  # Job 2: Integration Tests - Compile Examples
+  integration-tests:
+    name: Integration Tests
+    needs: build-and-test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: '0.15.2'
+
+    - name: Install GCC (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y gcc
+
+    - name: Install GCC (macOS)
+      if: matrix.os == 'macos-latest'
+      run: brew install gcc || true
+
+    - name: Build compiler
+      run: zig build
+
+    - name: Test compilation of all examples
+      run: |
+        echo "Testing compilation of all example files..."
+        mkdir -p test-output
+        EXIT_CODE=0
+
+        for example in examples/*.bs; do
+          if [ -f "$example" ]; then
+            echo "Compiling $example..."
+            BASE=$(basename "$example" .bs)
+            if ./zig-out/bin/boemia-compiler "$example" 2>&1 | tee "test-output/${BASE}.log"; then
+              echo "  ✓ Compilation successful"
+
+              # Try to compile the generated C code
+              if [ -f "build/output.c" ]; then
+                echo "  Compiling generated C code..."
+                if gcc build/output.c -o "test-output/${BASE}" -lm 2>&1 | tee "test-output/${BASE}_gcc.log"; then
+                  echo "  ✓ GCC compilation successful"
+                else
+                  echo "  ✗ GCC compilation failed"
+                  EXIT_CODE=1
+                fi
+              fi
+            else
+              echo "  ✗ Compilation failed"
+              EXIT_CODE=1
+            fi
+            echo ""
+          fi
+        done
+
+        exit $EXIT_CODE
+
+    - name: Upload compilation logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: compilation-logs-${{ matrix.os }}
+        path: test-output/
+        retention-days: 7
+
+  # Job 3: End-to-End Tests - Execute Examples
+  e2e-tests:
+    name: E2E Tests
+    needs: build-and-test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: '0.15.2'
+
+    - name: Install GCC (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y gcc
+
+    - name: Build compiler
+      run: zig build
+
+    - name: Test hello.bs
+      run: |
+        echo "Testing hello.bs example..."
+        ./zig-out/bin/boemia-compiler examples/hello.bs
+        gcc build/output.c -o build/hello -lm
+        OUTPUT=$(./build/hello)
+        echo "Output: $OUTPUT"
+        if echo "$OUTPUT" | grep -q "Hola"; then
+          echo "✓ hello.bs test passed"
+        else
+          echo "✗ hello.bs test failed"
+          exit 1
+        fi
+
+    - name: Test simple.bs
+      run: |
+        echo "Testing simple.bs example..."
+        ./zig-out/bin/boemia-compiler examples/simple.bs
+        gcc build/output.c -o build/simple -lm
+        OUTPUT=$(./build/simple)
+        echo "Output: $OUTPUT"
+        if echo "$OUTPUT" | grep -q "42"; then
+          echo "✓ simple.bs test passed"
+        else
+          echo "✗ simple.bs test failed"
+          exit 1
+        fi
+
+    - name: Test arrays
+      run: |
+        echo "Testing test_arrays_complete.bs example..."
+        ./zig-out/bin/boemia-compiler examples/test_arrays_complete.bs
+        gcc build/output.c -o build/arrays -lm
+        ./build/arrays > output.txt
+        echo "Output:"
+        cat output.txt
+
+        # Verificar que el output contiene valores esperados
+        if grep -q "10" output.txt && grep -q "20" output.txt; then
+          echo "✓ Arrays test passed"
+        else
+          echo "✗ Arrays test failed"
+          exit 1
+        fi
+
+    - name: Test nested arrays
+      run: |
+        echo "Testing test_arrays_nested.bs example..."
+        ./zig-out/bin/boemia-compiler examples/test_arrays_nested.bs
+        gcc build/output.c -o build/nested -lm
+        ./build/nested > output_nested.txt
+        echo "Output:"
+        cat output_nested.txt
+
+        # El test genera varios números, solo verificamos que se ejecuta sin crash
+        if [ $? -eq 0 ]; then
+          echo "✓ Nested arrays test passed"
+        else
+          echo "✗ Nested arrays test failed"
+          exit 1
+        fi
+
+  # Job 4: Memory Leak Detection
+  memory-tests:
+    name: Memory Leak Tests
+    needs: build-and-test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: '0.15.2'
+
+    - name: Install Valgrind (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y valgrind gcc
+
+    - name: Build compiler
+      run: zig build
+
+    - name: Memory leak test - Arrays (Ubuntu with Valgrind)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        echo "Testing memory leaks with Valgrind..."
+        ./zig-out/bin/boemia-compiler examples/test_arrays_nested.bs
+        gcc build/output.c -o build/arrays_mem -lm -g
+
+        valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes \
+                 --error-exitcode=1 ./build/arrays_mem > /dev/null 2>&1
+
+        if [ $? -eq 0 ]; then
+          echo "✓ No memory leaks detected (Valgrind)"
+        else
+          echo "Running with output for debugging..."
+          valgrind --leak-check=full --show-leak-kinds=all ./build/arrays_mem
+          exit 1
+        fi
+
+    - name: Memory leak test - Arrays (macOS with leaks)
+      if: matrix.os == 'macos-latest'
+      run: |
+        echo "Testing memory leaks with leaks tool..."
+        ./zig-out/bin/boemia-compiler examples/test_arrays_nested.bs
+        gcc build/output.c -o build/arrays_mem -lm
+
+        # Run leaks tool
+        leaks -atExit -- ./build/arrays_mem > leaks_output.txt 2>&1
+
+        # Check for "0 leaks"
+        if grep -q "0 leaks for 0 total leaked bytes" leaks_output.txt; then
+          echo "✓ No memory leaks detected (leaks)"
+        else
+          echo "✗ Memory leaks detected:"
+          cat leaks_output.txt
+          exit 1
+        fi
+
+    - name: Upload leak reports
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: leak-reports-${{ matrix.os }}
+        path: |
+          leaks_output.txt
+          valgrind_output.txt
+        retention-days: 7
+
+  # Job 5: Code Quality Checks
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: '0.15.2'
+
+    - name: Check Zig formatting
+      run: |
+        echo "Checking Zig code formatting..."
+        zig fmt --check src/*.zig tests/*.zig || {
+          echo "✗ Code formatting check failed"
+          echo "Run 'zig fmt src/*.zig tests/*.zig' to fix"
+          exit 1
+        }
+
+    - name: Build with all warnings
+      run: zig build 2>&1 | tee build_warnings.txt
+
+    - name: Upload build warnings
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-warnings
+        path: build_warnings.txt
+        retention-days: 7
+
+  # Job 6: Documentation Tests
+  docs-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Verify documentation exists
+      run: |
+        echo "Checking documentation files..."
+        DOCS_OK=true
+
+        # Check main documentation files
+        for doc in README.md Documentation/00-INDEX.md Documentation/25-ARRAYS.md; do
+          if [ ! -f "$doc" ]; then
+            echo "✗ Missing: $doc"
+            DOCS_OK=false
+          else
+            echo "✓ Found: $doc"
+          fi
+        done
+
+        if [ "$DOCS_OK" = false ]; then
+          exit 1
+        fi
+
+    - name: Check for broken markdown links (basic)
+      run: |
+        echo "Checking for obvious broken links..."
+        # Simple check for broken relative links in markdown files
+        find Documentation -name "*.md" -type f | while read file; do
+          echo "Checking $file..."
+          # This is a basic check - can be enhanced with proper link checker
+          grep -o '\[.*\](.*\.md)' "$file" || true
+        done
+
+  # Job 7: Example Consistency Check
+  examples-check:
+    name: Examples Consistency
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Zig
+      uses: goto-bus-stop/setup-zig@v2
+      with:
+        version: '0.15.2'
+
+    - name: Install GCC
+      run: sudo apt-get update && sudo apt-get install -y gcc
+
+    - name: Build compiler
+      run: zig build
+
+    - name: Verify all examples compile without errors
+      run: |
+        echo "Verifying all examples are valid Boemia Script..."
+        FAILED=0
+
+        for example in examples/*.bs; do
+          if [ -f "$example" ]; then
+            echo "Checking $example..."
+            if ./zig-out/bin/boemia-compiler "$example" 2>&1 | grep -i "error"; then
+              echo "✗ $example has compilation errors"
+              FAILED=1
+            else
+              echo "✓ $example compiles successfully"
+            fi
+          fi
+        done
+
+        exit $FAILED
+
+  # Summary Job
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-test, integration-tests, e2e-tests, memory-tests, code-quality, docs-check, examples-check]
+    if: always()
+
+    steps:
+    - name: Check all jobs status
+      run: |
+        echo "CI Pipeline Summary:"
+        echo "===================="
+        echo "Build & Unit Tests: ${{ needs.build-and-test.result }}"
+        echo "Integration Tests: ${{ needs.integration-tests.result }}"
+        echo "E2E Tests: ${{ needs.e2e-tests.result }}"
+        echo "Memory Tests: ${{ needs.memory-tests.result }}"
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Docs Check: ${{ needs.docs-check.result }}"
+        echo "Examples Check: ${{ needs.examples-check.result }}"
+
+        if [ "${{ needs.build-and-test.result }}" != "success" ] || \
+           [ "${{ needs.integration-tests.result }}" != "success" ] || \
+           [ "${{ needs.e2e-tests.result }}" != "success" ] || \
+           [ "${{ needs.memory-tests.result }}" != "success" ] || \
+           [ "${{ needs.code-quality.result }}" != "success" ] || \
+           [ "${{ needs.docs-check.result }}" != "success" ] || \
+           [ "${{ needs.examples-check.result }}" != "success" ]; then
+          echo "❌ CI Pipeline FAILED"
+          exit 1
+        else
+          echo "✅ CI Pipeline PASSED"
+        fi
