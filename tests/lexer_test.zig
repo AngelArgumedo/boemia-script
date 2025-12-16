@@ -5,14 +5,14 @@ const TokenType = @import("token.zig").TokenType;
 
 test "lexer: tokenize simple variable declaration" {
     const allocator = testing.allocator;
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
 
     var lexer = Lexer.init(allocator, source);
 
-    // make
+    // let
     var tok = lexer.nextToken();
-    try testing.expectEqual(TokenType.MAKE, tok.type);
-    try testing.expectEqualStrings("make", tok.lexeme);
+    try testing.expectEqual(TokenType.LET, tok.type);
+    try testing.expectEqualStrings("let", tok.lexeme);
 
     // x
     tok = lexer.nextToken();
@@ -45,14 +45,14 @@ test "lexer: tokenize simple variable declaration" {
     try testing.expectEqual(TokenType.EOF, tok.type);
 }
 
-test "lexer: tokenize constant declaration with seal" {
+test "lexer: tokenize constant declaration with const" {
     const allocator = testing.allocator;
-    const source = "seal PI: float = 3.14;";
+    const source = "const PI: float = 3.14;";
 
     var lexer = Lexer.init(allocator, source);
 
     var tok = lexer.nextToken();
-    try testing.expectEqual(TokenType.SEAL, tok.type);
+    try testing.expectEqual(TokenType.CONST, tok.type);
 
     tok = lexer.nextToken();
     try testing.expectEqual(TokenType.IDENTIFIER, tok.type);
@@ -74,12 +74,12 @@ test "lexer: tokenize constant declaration with seal" {
 
 test "lexer: tokenize string literal" {
     const allocator = testing.allocator;
-    const source = "make msg: string = \"Hello, World!\";";
+    const source = "let msg: string = \"Hello, World!\";";
 
     var lexer = Lexer.init(allocator, source);
 
     // Skip to string
-    _ = lexer.nextToken(); // make
+    _ = lexer.nextToken(); // let
     _ = lexer.nextToken(); // msg
     _ = lexer.nextToken(); // :
     _ = lexer.nextToken(); // string
@@ -98,7 +98,8 @@ test "lexer: tokenize operators" {
 
     const expected = [_]TokenType{
         .PLUS, .MINUS, .STAR, .SLASH,
-        .EQ, .NEQ, .LT, .GT, .LTE, .GTE,
+        .EQ,   .NEQ,   .LT,   .GT,
+        .LTE,  .GTE,
     };
 
     for (expected) |expected_type| {
@@ -111,18 +112,18 @@ test "lexer: skip whitespace and comments" {
     const allocator = testing.allocator;
     const source =
         \\// This is a comment
-        \\make x: int = 5; // another comment
+        \\let x: int = 5; // another comment
         \\
-        \\make y: int = 10;
+        \\let y: int = 10;
     ;
 
     var lexer = Lexer.init(allocator, source);
 
     // Should skip comment and whitespace
     var tok = lexer.nextToken();
-    try testing.expectEqual(TokenType.MAKE, tok.type);
+    try testing.expectEqual(TokenType.LET, tok.type);
 
-    // Skip to second make
+    // Skip to second let
     _ = lexer.nextToken(); // x
     _ = lexer.nextToken(); // :
     _ = lexer.nextToken(); // int
@@ -131,7 +132,7 @@ test "lexer: skip whitespace and comments" {
     _ = lexer.nextToken(); // ;
 
     tok = lexer.nextToken();
-    try testing.expectEqual(TokenType.MAKE, tok.type);
+    try testing.expectEqual(TokenType.LET, tok.type);
 }
 
 test "lexer: tokenize if statement" {
@@ -161,12 +162,12 @@ test "lexer: tokenize if statement" {
 
 test "lexer: tokenize boolean literals" {
     const allocator = testing.allocator;
-    const source = "make flag: bool = true;";
+    const source = "let flag: bool = true;";
 
     var lexer = Lexer.init(allocator, source);
 
     // Skip to true
-    _ = lexer.nextToken(); // make
+    _ = lexer.nextToken(); // let
     _ = lexer.nextToken(); // flag
     _ = lexer.nextToken(); // :
     _ = lexer.nextToken(); // bool

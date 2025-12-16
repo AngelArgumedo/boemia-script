@@ -27,7 +27,7 @@ fn compileAndCheckOutput(allocator: std.mem.Allocator, source: []const u8) ![]co
 
 test "integration: compile simple integer variable" {
     const allocator = testing.allocator;
-    const source = "make x: int = 42;";
+    const source = "let x: int = 42;";
 
     const c_code = try compileAndCheckOutput(allocator, source);
     defer allocator.free(c_code);
@@ -37,7 +37,7 @@ test "integration: compile simple integer variable" {
 
 test "integration: compile string variable" {
     const allocator = testing.allocator;
-    const source = "make msg: string = \"Hello\";";
+    const source = "let msg: string = \"Hello\";";
 
     const c_code = try compileAndCheckOutput(allocator, source);
     defer allocator.free(c_code);
@@ -47,7 +47,7 @@ test "integration: compile string variable" {
 
 test "integration: compile constant with seal" {
     const allocator = testing.allocator;
-    const source = "seal PI: float = 3.14;";
+    const source = "const PI: float = 3.14;";
 
     const c_code = try compileAndCheckOutput(allocator, source);
     defer allocator.free(c_code);
@@ -58,7 +58,7 @@ test "integration: compile constant with seal" {
 test "integration: compile print statement with integer" {
     const allocator = testing.allocator;
     const source =
-        \\make x: int = 42;
+        \\let x: int = 42;
         \\print(x);
     ;
 
@@ -71,7 +71,7 @@ test "integration: compile print statement with integer" {
 test "integration: compile print statement with string" {
     const allocator = testing.allocator;
     const source =
-        \\make msg: string = "Hello";
+        \\let msg: string = "Hello";
         \\print(msg);
     ;
 
@@ -84,9 +84,9 @@ test "integration: compile print statement with string" {
 test "integration: compile if statement" {
     const allocator = testing.allocator;
     const source =
-        \\make x: int = 10;
+        \\let x: int = 10;
         \\if x > 5 {
-        \\    make y: int = 20;
+        \\    let y: int = 20;
         \\}
     ;
 
@@ -100,11 +100,11 @@ test "integration: compile if statement" {
 test "integration: compile if-else statement" {
     const allocator = testing.allocator;
     const source =
-        \\make x: int = 3;
+        \\let x: int = 3;
         \\if x > 5 {
-        \\    make y: int = 20;
+        \\    let y: int = 20;
         \\} else {
-        \\    make y: int = 10;
+        \\    let y: int = 10;
         \\}
     ;
 
@@ -117,7 +117,7 @@ test "integration: compile if-else statement" {
 test "integration: compile while loop" {
     const allocator = testing.allocator;
     const source =
-        \\make x: int = 0;
+        \\let x: int = 0;
         \\while x < 5 {
         \\    x = x + 1;
         \\}
@@ -148,7 +148,7 @@ test "integration: compile for loop" {
 
 test "integration: compile arithmetic expressions" {
     const allocator = testing.allocator;
-    const source = "make result: int = 5 + 3 * 2;";
+    const source = "let result: int = 5 + 3 * 2;";
 
     const c_code = try compileAndCheckOutput(allocator, source);
     defer allocator.free(c_code);
@@ -158,7 +158,7 @@ test "integration: compile arithmetic expressions" {
 
 test "integration: compile boolean variable" {
     const allocator = testing.allocator;
-    const source = "make flag: bool = true;";
+    const source = "let flag: bool = true;";
 
     const c_code = try compileAndCheckOutput(allocator, source);
     defer allocator.free(c_code);
@@ -169,8 +169,8 @@ test "integration: compile boolean variable" {
 test "integration: compile comparison expression" {
     const allocator = testing.allocator;
     const source =
-        \\make x: int = 5;
-        \\make result: bool = x == 5;
+        \\let x: int = 5;
+        \\let result: bool = x == 5;
     ;
 
     const c_code = try compileAndCheckOutput(allocator, source);
@@ -182,9 +182,9 @@ test "integration: compile comparison expression" {
 test "integration: full program with multiple features" {
     const allocator = testing.allocator;
     const source =
-        \\make x: int = 10;
-        \\make y: int = 20;
-        \\make sum: int = x + y;
+        \\let x: int = 10;
+        \\let y: int = 20;
+        \\let sum: int = x + y;
         \\
         \\if sum > 25 {
         \\    print(sum);
