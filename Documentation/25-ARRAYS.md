@@ -198,7 +198,7 @@ flowchart TD
     B -->|Otros| E[Simple Identifier]
 
     C --> F[Parsear Index]
-    F --> G[Recursion: Puede ser arr[0][1]]
+    F --> G["Recursion: Puede ser arr[0][1]"]
     G --> B
 
     D -->|IDENTIFIER| H{Siguiente Token?}
