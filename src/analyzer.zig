@@ -49,6 +49,7 @@ pub const Analyzer = struct {
             self.allocator.free(entry.value_ptr.param_types);
         }
         self.function_table.deinit();
+
         for (self.errors.items) |err| {
             self.allocator.free(err);
         }
@@ -499,7 +500,9 @@ pub const Analyzer = struct {
                     .allocator = self.allocator,
                 };
 
-                break :blk DataType{ .ARRAY = array_type };
+                const result_type = DataType{ .ARRAY = array_type };
+
+                break :blk result_type;
             },
             .index_access => |idx| blk: {
                 const array_type = try self.checkExpr(&idx.array);

@@ -160,6 +160,11 @@ pub const Expr = union(enum) {
                 allocator.destroy(call);
             },
             .array_literal => |arr| {
+                // Free optional element type
+                if (arr.element_type) |elem_type| {
+                    var mutable_elem_type = elem_type;
+                    mutable_elem_type.deinit();
+                }
                 for (arr.elements) |*elem| {
                     elem.deinit(allocator);
                 }
@@ -278,6 +283,8 @@ pub const Stmt = union(enum) {
     pub fn deinit(self: *Stmt, allocator: std.mem.Allocator) void {
         switch (self.*) {
             .variable_decl => |*decl| {
+                var mutable_type = decl.data_type;
+                mutable_type.deinit();
                 decl.value.deinit(allocator);
             },
             .assignment => |*assign| {
@@ -322,6 +329,8 @@ pub const Stmt = union(enum) {
                 allocator.destroy(for_s);
             },
             .for_in_stmt => |for_in| {
+                // DON'T free iterator_type - it's a shallow copy that shares pointers
+                // with the parent array type, which will free it when the array is freed
                 for_in.iterable.deinit(allocator);
                 for (for_in.body) |*stmt| {
                     stmt.deinit(allocator);
@@ -348,7 +357,15 @@ pub const Stmt = union(enum) {
                 allocator.free(stmts);
             },
             .function_decl => |func| {
+                // Free parameter data types
+                for (func.params) |*param| {
+                    var mutable_param_type = param.data_type;
+                    mutable_param_type.deinit();
+                }
                 allocator.free(func.params);
+                // Free return type
+                var mutable_return_type = func.return_type;
+                mutable_return_type.deinit();
                 for (func.body) |*stmt| {
                     stmt.deinit(allocator);
                 }
