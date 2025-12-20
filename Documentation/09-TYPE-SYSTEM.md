@@ -30,14 +30,33 @@ graph TB
 ```mermaid
 classDiagram
     class DataType {
-        <<enumeration>>
+        <<union>>
         INT
         FLOAT
         STRING
         BOOL
         VOID
+        ARRAY: *ArrayType
+        STRUCT: *StructType
         +fromString(s) DataType
         +toString() string
+        +toCName() string
+    }
+
+    class ArrayType {
+        element_type: *DataType
+        allocator: Allocator
+    }
+
+    class StructType {
+        name: string
+        fields: []StructField
+        allocator: Allocator
+    }
+
+    class StructField {
+        name: string
+        field_type: *DataType
     }
 
     class Symbol {
@@ -45,6 +64,11 @@ classDiagram
         is_const: bool
     }
 
+    DataType --> ArrayType
+    DataType --> StructType
+    StructType --> StructField
+    StructField --> DataType
+    ArrayType --> DataType
     Symbol --> DataType
 ```
 
@@ -57,6 +81,13 @@ classDiagram
 | `string` | Cadena de texto | Variable | Secuencia de chars | Texto, mensajes |
 | `bool` | Booleano | 1 byte | true, false | Condiciones, flags |
 | `void` | Sin valor | 0 | - | Funciones sin retorno |
+
+### Tipos Compuestos
+
+| Tipo | Descripcion | Ejemplo | Uso |
+|------|-------------|---------|-----|
+| `[tipo]` | Array dinamico | `[int]`, `[[float]]` | Colecciones homogeneas |
+| `NombreStruct` | Estructura | `Point`, `Player` | Datos heterogeneos relacionados |
 
 ### Representacion en Memoria
 
@@ -602,25 +633,95 @@ make y = 3.14;  // Tipo inferido: float
 make z = "Hola";  // Tipo inferido: string
 ```
 
-### Tipos Compuestos
+### Tipos Compuestos (Implementado)
+
+#### Arrays
 
 ```boemia
-// Arrays
-make numeros: []int = [1, 2, 3, 4, 5];
+// Arrays simples
+let numeros: [int] = [1, 2, 3, 4, 5];
+let nombres: [string] = ["Ana", "Bob", "Carlos"];
 
-// Structs
+// Arrays anidados
+let matriz: [[int]] = [[1, 2], [3, 4], [5, 6]];
+
+// Acceso a elementos
+let primero: int = numeros[0];  // 1
+let tamaño: int = numeros.length;  // 5
+
+// Metodos
+numeros.push(6);  // Agregar elemento
+```
+
+Ver [Documentación de Arrays](25-ARRAYS.md) para más detalles.
+
+#### Structs
+
+```boemia
+// Definición de struct
 struct Persona {
     nombre: string,
     edad: int
 }
 
-make juan: Persona = Persona{
+// Instanciación
+let juan: Persona = Persona {
     nombre: "Juan",
     edad: 30
 };
 
-// Tuples
+// Acceso a campos
+let nombre_juan: string = juan.nombre;
+let edad_juan: int = juan.edad;
+
+// Structs anidados
+struct Direccion {
+    calle: string,
+    numero: int
+}
+
+struct Empleado {
+    info: Persona,
+    direccion: Direccion,
+    salario: float
+}
+
+let empleado: Empleado = Empleado {
+    info: Persona { nombre: "Ana", edad: 25 },
+    direccion: Direccion { calle: "Main St", numero: 123 },
+    salario: 50000.0
+};
+
+// Acceso anidado
+let nombre_empleado: string = empleado.info.nombre;
+```
+
+Ver [Documentación de Structs](27-STRUCTS.md) para más detalles.
+
+#### Combinación de Arrays y Structs
+
+```boemia
+// Array de structs
+let jugadores: [Player] = [
+    Player { nombre: "Alice", puntos: 100 },
+    Player { nombre: "Bob", puntos: 85 }
+];
+
+// Struct con campos array
+struct Equipo {
+    nombre: string,
+    miembros: [string],
+    puntuaciones: [int]
+}
+```
+
+### Tipos Compuestos (Futuro)
+
+#### Tuples
+```boemia
+// Tuples (no implementado aún)
 make punto: (int, int) = (10, 20);
+make persona: (string, int, bool) = ("Ana", 25, true);
 ```
 
 ### Null Safety
@@ -655,8 +756,39 @@ if nombre != null {
 | Analizar expresion | O(n) | n = profundidad |
 | Promocion de tipos | O(1) | Regla fija |
 
+## Sistema de Tipos Recursivos
+
+El sistema de tipos de Boemia Script utiliza un `union(enum)` recursivo que permite tipos compuestos arbitrariamente anidados.
+
+```zig
+pub const DataType = union(enum) {
+    INT,
+    FLOAT,
+    STRING,
+    BOOL,
+    VOID,
+    ARRAY: *ArrayType,
+    STRUCT: *StructType,
+};
+```
+
+**Ventajas:**
+- **Recursividad:** Permite `[int]`, `[[int]]`, `[[[int]]]`, etc.
+- **Extensibilidad:** Fácil agregar nuevos tipos compuestos
+- **Type Safety:** Verificación completa en tiempo de compilación
+- **Eficiencia:** Punteros evitan copias innecesarias
+
+**Ejemplos de tipos recursivos:**
+- `[int]` - Array de enteros
+- `[[float]]` - Array de arrays de flotantes
+- `[Player]` - Array de structs
+- Struct con campo `[int]` - Struct conteniendo array
+- Struct con campo de otro struct - Composición
+
 ## Referencias
 
 - [Analyzer](06-ANALYZER.md) - Analisis semantico y verificacion de tipos
 - [AST Structure](13-AST-STRUCTURE.md) - Estructura del AST
 - [Operators Reference](21-OPERATORS-REFERENCE.md) - Referencia de operadores
+- [Arrays](25-ARRAYS.md) - Documentación completa de arrays
+- [Structs](27-STRUCTS.md) - Documentación completa de structs

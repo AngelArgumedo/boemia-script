@@ -29,6 +29,7 @@ Esta documentacion proporciona una guia completa y detallada sobre el compilador
 - [11 - Estructuras de Control](11-CONTROL-STRUCTURES.md)
 - [12 - Funciones y Scope](12-FUNCTIONS-SCOPE.md)
 - [25 - Arrays Dinamicos](25-ARRAYS.md)
+- [27 - Structs](27-STRUCTS.md)
 
 #### IV. Implementacion Tecnica
 
@@ -82,6 +83,7 @@ graph TB
     LANGUAGE --> K[11-CONTROL]
     LANGUAGE --> L[12-FUNCTIONS]
     LANGUAGE --> Z[25-ARRAYS]
+    LANGUAGE --> Z2[27-STRUCTS]
 
     IMPL --> M[13-AST]
     IMPL --> N[14-ERRORS]
@@ -183,9 +185,9 @@ Esta documentacion utiliza Mermaid para diagramas visuales. Los diagramas son in
 ## Version de la Documentacion
 
 - Version del Proyecto: 1.0
-- Fecha de Actualizacion: 2025-12-16
+- Fecha de Actualizacion: 2025-12-20
 - Estado: Funcional y Operativo
-- Ultima Actualizacion: Agregada documentacion de Arrays Dinamicos (25-ARRAYS.md)
+- Ultima Actualizacion: Agregada documentacion de Structs (27-STRUCTS.md)
 
 ## Licencia
 

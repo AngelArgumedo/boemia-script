@@ -33,6 +33,7 @@ pub const TokenType = enum {
     FOR, // bucle for
     IN, // palabra clave para for-in loops
     PRINT, // funcion de salida incorporada
+    STRUCT, // palabra clave para declarar estructuras
 
     // TIPOS DE DATOS
     // Estos tokens representan los tipos que pueden tener las variables
@@ -140,6 +141,7 @@ pub const keywords = std.StaticStringMap(TokenType).initComptime(.{
     .{ "const", .CONST },
     .{ "fn", .FN },
     .{ "return", .RETURN },
+    .{ "struct", .STRUCT },
 
     // Palabras reservadas para control de flujo
     .{ "if", .IF },

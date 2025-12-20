@@ -148,7 +148,9 @@ Compílalo y ejecútalo:
 ### Características del Lenguaje
 - **Variables mutables** (`let`)
 - **Constantes inmutables** (`const`)
-- **Tipos estáticos**: `int`, `float`, `string`, `bool`
+- **Tipos primitivos**: `int`, `float`, `string`, `bool`
+- **Arrays dinámicos**: `[tipo]` con soporte para anidamiento (`[[int]]`, `[[[float]]]`)
+- **Structs**: Tipos de datos compuestos definidos por el usuario
 - **Operadores aritméticos**: `+`, `-`, `*`, `/`
 - **Operadores de comparación**: `==`, `!=`, `<`, `>`, `<=`, `>=`
 - **Condicionales**: `if`, `else if`, `else`
@@ -159,8 +161,7 @@ Compílalo y ejecútalo:
 - **Scope estilo TypeScript**
 
 ### Futura Implementación (v2.0)
-- (pendiente) Arrays y colecciones
-- (pendiente) Structs/Clases
+- (pendiente) Métodos en structs
 - (pendiente) Manejo de errores (try/catch)
 - (pendiente) Módulos e imports
 - (pendiente) Inferencia de tipos
@@ -232,6 +233,67 @@ fn saludar(nombre: string): void {
 
 let resultado: int = suma(5, 3);
 saludar("Mundo");
+```
+
+### Arrays Dinámicos
+
+```boemia
+// Arrays simples
+let numeros: [int] = [1, 2, 3, 4, 5];
+let nombres: [string] = ["Ana", "Bob", "Carlos"];
+
+// Acceso a elementos
+let primero: int = numeros[0];  // 1
+let tam: int = numeros.length;  // 5
+
+// Modificar elementos
+numeros[0] = 10;
+
+// Métodos
+numeros.push(6);  // Agregar elemento
+
+// Arrays anidados
+let matriz: [[int]] = [[1, 2], [3, 4], [5, 6]];
+let elemento: int = matriz[0][1];  // 2
+```
+
+### Structs
+
+```boemia
+// Declaración de struct
+struct Point {
+    x: int,
+    y: int
+}
+
+// Instanciación
+let p1: Point = Point { x: 10, y: 20 };
+let p2: Point = Point { x: 5, y: 15 };
+
+// Acceso a campos
+let x_val: int = p1.x;
+print(p2.y);
+
+// Structs anidados
+struct Rectangle {
+    topLeft: Point,
+    width: int,
+    height: int
+}
+
+let rect: Rectangle = Rectangle {
+    topLeft: Point { x: 0, y: 0 },
+    width: 100,
+    height: 50
+};
+
+let top_x: int = rect.topLeft.x;  // Acceso anidado
+
+// Arrays de structs
+let puntos: [Point] = [
+    Point { x: 0, y: 0 },
+    Point { x: 10, y: 20 }
+];
 ```
 
 ## Arquitectura del Compilador

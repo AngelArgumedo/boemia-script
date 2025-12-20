@@ -1,0 +1,45 @@
+struct Vector2D {
+    x: float,
+    y: float
+}
+
+struct Player {
+    score: int,
+    position: Vector2D
+}
+
+struct Game {
+    maxPlayers: int,
+    isActive: bool
+}
+
+let maxP: int = 4;
+let active: bool = true;
+
+let game: Game = Game {
+    maxPlayers: maxP,
+    isActive: active
+};
+
+print(game.maxPlayers);
+
+let startPos: Vector2D = Vector2D { x: 0.0, y: 0.0 };
+
+let player1: Player = Player {
+    score: 100,
+    position: startPos
+};
+
+let player2: Player = Player {
+    score: 85,
+    position: Vector2D { x: 10.5, y: 20.3 }
+};
+
+print(player1.score);
+print(player2.score);
+
+let p2_x: float = player2.position.x;
+let p2_y: float = player2.position.y;
+
+print(p2_x);
+print(p2_y);

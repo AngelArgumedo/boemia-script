@@ -29,6 +29,7 @@ pub const Analyzer = struct {
     allocator: std.mem.Allocator,
     symbol_table: std.StringHashMap(Symbol),
     function_table: std.StringHashMap(FunctionSignature),
+    struct_table: std.StringHashMap(DataType.StructType),
     errors: std.ArrayList([]const u8),
 
     pub fn init(allocator: std.mem.Allocator) Analyzer {
@@ -36,6 +37,7 @@ pub const Analyzer = struct {
             .allocator = allocator,
             .symbol_table = std.StringHashMap(Symbol).init(allocator),
             .function_table = std.StringHashMap(FunctionSignature).init(allocator),
+            .struct_table = std.StringHashMap(DataType.StructType).init(allocator),
             .errors = .empty,
         };
     }
@@ -50,10 +52,37 @@ pub const Analyzer = struct {
         }
         self.function_table.deinit();
 
+        // Free struct types
+        var struct_it = self.struct_table.iterator();
+        while (struct_it.next()) |entry| {
+            for (entry.value_ptr.fields) |field| {
+                field.field_type.deinit();
+                self.allocator.destroy(field.field_type);
+            }
+            self.allocator.free(entry.value_ptr.fields);
+        }
+        self.struct_table.deinit();
+
         for (self.errors.items) |err| {
             self.allocator.free(err);
         }
         self.errors.deinit(self.allocator);
+    }
+
+    fn resolveStructType(self: *Analyzer, data_type: DataType) AnalyzerError!DataType {
+        switch (data_type) {
+            .STRUCT => |struct_type| {
+                // Look up the struct in the struct_table to get full definition
+                if (self.struct_table.get(struct_type.name)) |full_struct| {
+                    const resolved_ptr = try self.allocator.create(DataType.StructType);
+                    resolved_ptr.* = full_struct;
+                    return DataType{ .STRUCT = resolved_ptr };
+                } else {
+                    return data_type; // Return as-is if not found (will be caught by validation)
+                }
+            },
+            else => return data_type,
+        }
     }
 
     fn typesEqual(self: *Analyzer, a: DataType, b: DataType) bool {
@@ -67,6 +96,15 @@ pub const Analyzer = struct {
                 switch (b) {
                     .ARRAY => |arr_b| {
                         return typesEqual(self, arr_a.element_type.*, arr_b.element_type.*);
+                    },
+                    else => return false,
+                }
+            },
+            .STRUCT => |struct_a| {
+                switch (b) {
+                    .STRUCT => |struct_b| {
+                        // Los structs son iguales si tienen el mismo nombre
+                        return std.mem.eql(u8, struct_a.name, struct_b.name);
                     },
                     else => return false,
                 }
@@ -97,10 +135,13 @@ pub const Analyzer = struct {
 
                 const expr_type = try self.checkExpr(&decl.value);
 
+                // Resolve struct types to get full definition
+                const resolved_type = try self.resolveStructType(decl.data_type);
+
                 // Check type compatibility
-                if (!self.typesEqual(expr_type, decl.data_type)) {
+                if (!self.typesEqual(expr_type, resolved_type)) {
                     const expr_type_str = try expr_type.toString(self.allocator);
-                    const decl_type_str = try decl.data_type.toString(self.allocator);
+                    const decl_type_str = try resolved_type.toString(self.allocator);
                     const err = try std.fmt.allocPrint(
                         self.allocator,
                         "Type mismatch: cannot assign {s} to {s}",
@@ -111,7 +152,7 @@ pub const Analyzer = struct {
                 }
 
                 try self.symbol_table.put(decl.name, Symbol{
-                    .data_type = decl.data_type,
+                    .data_type = resolved_type,
                     .is_const = decl.is_const,
                 });
             },
@@ -327,6 +368,65 @@ pub const Analyzer = struct {
                 for (func.body) |*s| {
                     try self.analyzeStmt(s);
                 }
+            },
+            .struct_decl => |struct_decl| {
+                // Check if struct already exists
+                if (self.struct_table.get(struct_decl.name)) |_| {
+                    const err = try std.fmt.allocPrint(
+                        self.allocator,
+                        "Struct '{s}' is already declared",
+                        .{struct_decl.name},
+                    );
+                    try self.errors.append(self.allocator, err);
+                    return AnalyzerError.RedeclaredVariable;
+                }
+
+                // Validate that all field types exist
+                for (struct_decl.fields) |field| {
+                    // Check if field type is a struct that exists
+                    switch (field.field_type.*) {
+                        .STRUCT => |field_struct| {
+                            if (self.struct_table.get(field_struct.name) == null) {
+                                const err = try std.fmt.allocPrint(
+                                    self.allocator,
+                                    "Undefined struct type '{s}' in field '{s}'",
+                                    .{ field_struct.name, field.name },
+                                );
+                                try self.errors.append(self.allocator, err);
+                                return AnalyzerError.TypeMismatch;
+                            }
+                        },
+                        else => {},
+                    }
+                }
+
+                // Check for duplicate field names
+                for (struct_decl.fields, 0..) |field, i| {
+                    for (struct_decl.fields[i + 1 ..]) |other_field| {
+                        if (std.mem.eql(u8, field.name, other_field.name)) {
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Duplicate field '{s}' in struct '{s}'",
+                                .{ field.name, struct_decl.name },
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return AnalyzerError.RedeclaredVariable;
+                        }
+                    }
+                }
+
+                // Resolve struct field types before registering
+                for (struct_decl.fields) |field| {
+                    const resolved_type = try self.resolveStructType(field.field_type.*);
+                    field.field_type.* = resolved_type;
+                }
+
+                // Register struct in struct table
+                try self.struct_table.put(struct_decl.name, DataType.StructType{
+                    .name = struct_decl.name,
+                    .fields = struct_decl.fields,
+                    .allocator = self.allocator,
+                });
             },
         }
     }
@@ -553,6 +653,23 @@ pub const Analyzer = struct {
                             return AnalyzerError.InvalidOperation;
                         }
                     },
+                    .STRUCT => |struct_type| {
+                        // Buscar el campo en el struct
+                        for (struct_type.fields) |field| {
+                            if (std.mem.eql(u8, field.name, mem.member)) {
+                                // Retornar el tipo del campo
+                                break :blk field.field_type.*;
+                            }
+                        }
+                        // Campo no encontrado
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Struct '{s}' does not have field '{s}'",
+                            .{ struct_type.name, mem.member },
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.InvalidOperation;
+                    },
                     else => {
                         const obj_type_str = try object_type.toString(self.allocator);
                         const err = try std.fmt.allocPrint(
@@ -619,6 +736,92 @@ pub const Analyzer = struct {
                         return AnalyzerError.InvalidOperation;
                     },
                 }
+            },
+            .struct_literal => |struct_lit| blk: {
+                // Verificar que el struct exista
+                const struct_type = self.struct_table.get(struct_lit.struct_name) orelse {
+                    const err = try std.fmt.allocPrint(
+                        self.allocator,
+                        "Undefined struct type '{s}'",
+                        .{struct_lit.struct_name},
+                    );
+                    try self.errors.append(self.allocator, err);
+                    return AnalyzerError.UndefinedVariable;
+                };
+
+                // Verificar que todos los campos requeridos esten presentes
+                for (struct_type.fields) |field| {
+                    var found = false;
+                    for (struct_lit.field_values) |field_val| {
+                        if (std.mem.eql(u8, field.name, field_val.field_name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Missing field '{s}' in struct literal '{s}'",
+                            .{ field.name, struct_lit.struct_name },
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.TypeMismatch;
+                    }
+                }
+
+                // Verificar que no haya campos extra
+                for (struct_lit.field_values) |field_val| {
+                    var found = false;
+                    for (struct_type.fields) |field| {
+                        if (std.mem.eql(u8, field.name, field_val.field_name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        const err = try std.fmt.allocPrint(
+                            self.allocator,
+                            "Unknown field '{s}' in struct '{s}'",
+                            .{ field_val.field_name, struct_lit.struct_name },
+                        );
+                        try self.errors.append(self.allocator, err);
+                        return AnalyzerError.TypeMismatch;
+                    }
+                }
+
+                // Verificar que los tipos de los valores coincidan
+                for (struct_lit.field_values) |field_val| {
+                    const value_type = try self.checkExpr(&field_val.value);
+
+                    // Buscar el tipo esperado del campo
+                    var expected_type: ?DataType = null;
+                    for (struct_type.fields) |field| {
+                        if (std.mem.eql(u8, field.name, field_val.field_name)) {
+                            expected_type = field.field_type.*;
+                            break;
+                        }
+                    }
+
+                    if (expected_type) |exp_type| {
+                        if (!self.typesEqual(value_type, exp_type)) {
+                            const value_type_str = try value_type.toString(self.allocator);
+                            const exp_type_str = try exp_type.toString(self.allocator);
+                            const err = try std.fmt.allocPrint(
+                                self.allocator,
+                                "Type mismatch for field '{s}': expected {s}, got {s}",
+                                .{ field_val.field_name, exp_type_str, value_type_str },
+                            );
+                            try self.errors.append(self.allocator, err);
+                            return AnalyzerError.TypeMismatch;
+                        }
+                    }
+                }
+
+                // Retornar tipo struct
+                const struct_type_ptr = try self.allocator.create(DataType.StructType);
+                struct_type_ptr.* = struct_type;
+
+                break :blk DataType{ .STRUCT = struct_type_ptr };
             },
         };
     }

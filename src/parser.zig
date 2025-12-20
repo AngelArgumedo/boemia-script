@@ -96,19 +96,33 @@ pub const Parser = struct {
             return DataType{ .ARRAY = array_type };
         }
 
-        // Simple type: int, float, string, bool, void
-        const data_type = try DataType.fromString(self.allocator, self.peek_token.lexeme) orelse {
-            const err = try std.fmt.allocPrint(
-                self.allocator,
-                "Invalid type '{s}' at {}:{}",
-                .{ self.peek_token.lexeme, self.peek_token.line, self.peek_token.column },
-            );
-            try self.errors.append(self.allocator, err);
-            return ParseError.InvalidType;
-        };
+        // Simple type: int, float, string, bool, void, or struct name (IDENTIFIER)
+        if (try DataType.fromString(self.allocator, self.peek_token.lexeme)) |data_type| {
+            self.nextToken(); // consume type token
+            return data_type;
+        }
 
-        self.nextToken(); // consume type token
-        return data_type;
+        // Check if it's a struct type (IDENTIFIER)
+        if (self.peek_token.type == .IDENTIFIER) {
+            // Assume it's a struct type - validation happens in analyzer
+            const struct_type_ptr = try self.allocator.create(DataType.StructType);
+            struct_type_ptr.* = .{
+                .name = self.peek_token.lexeme,
+                .fields = &[_]DataType.StructField{}, // Empty, will be filled by analyzer
+                .allocator = self.allocator,
+            };
+            self.nextToken(); // consume struct name
+            return DataType{ .STRUCT = struct_type_ptr };
+        }
+
+        // Invalid type
+        const err = try std.fmt.allocPrint(
+            self.allocator,
+            "Invalid type '{s}' at {}:{}",
+            .{ self.peek_token.lexeme, self.peek_token.line, self.peek_token.column },
+        );
+        try self.errors.append(self.allocator, err);
+        return ParseError.InvalidType;
     }
 
     pub fn parseProgram(self: *Parser) !Program {
@@ -151,6 +165,7 @@ pub const Parser = struct {
             .RETURN => self.parseReturnStatement(),
             .PRINT => self.parsePrintStatement(),
             .FN => self.parseFunctionDecl(),
+            .STRUCT => self.parseStructDecl(),
             .LBRACE => self.parseBlockStatement(),
             .IDENTIFIER => blk: {
                 if (self.peek_token.type == .ASSIGN) {
@@ -499,6 +514,97 @@ pub const Parser = struct {
         return Stmt{ .function_decl = func_decl };
     }
 
+    fn parseStructDecl(self: *Parser) ParseError!Stmt {
+        self.nextToken(); // consume 'struct'
+
+        if (self.current_token.type != .IDENTIFIER) {
+            return ParseError.UnexpectedToken;
+        }
+        const name = self.current_token.lexeme;
+
+        try self.expectToken(.LBRACE); // verifies peek is LBRACE, then advances
+        self.nextToken(); // move to first field or RBRACE
+
+        var fields: std.ArrayList(DataType.StructField) = .empty;
+        defer fields.deinit(self.allocator);
+
+        while (self.current_token.type != .RBRACE) {
+            if (self.current_token.type != .IDENTIFIER) {
+                return ParseError.UnexpectedToken;
+            }
+            const field_name = self.current_token.lexeme;
+
+            try self.expectToken(.COLON); // verifies peek is COLON, then advances
+
+            const field_type_value = try self.parseDataType();
+            self.nextToken(); // consume type token, move to ',' or '}'
+
+            // Allocar el tipo del campo
+            const field_type_ptr = try self.allocator.create(DataType);
+            field_type_ptr.* = field_type_value;
+
+            try fields.append(self.allocator, .{
+                .name = field_name,
+                .field_type = field_type_ptr,
+            });
+
+            if (self.current_token.type == .COMMA) {
+                self.nextToken(); // consume comma
+            }
+        }
+
+        // current_token is already RBRACE from the loop exit
+        self.nextToken(); // consume RBRACE
+
+        const struct_decl = try self.allocator.create(Stmt.StructDecl);
+        struct_decl.* = .{
+            .name = name,
+            .fields = try fields.toOwnedSlice(self.allocator),
+        };
+
+        return Stmt{ .struct_decl = struct_decl };
+    }
+
+    fn parseStructLiteral(self: *Parser, struct_name: []const u8) ParseError!Expr {
+        // current_token is LBRACE
+        self.nextToken(); // consume '{'
+
+        var field_values: std.ArrayList(Expr.FieldValue) = .empty;
+        defer field_values.deinit(self.allocator);
+
+        while (self.current_token.type != .RBRACE) {
+            if (self.current_token.type != .IDENTIFIER) {
+                return ParseError.UnexpectedToken;
+            }
+            const field_name = self.current_token.lexeme;
+
+            try self.expectToken(.COLON); // verifies peek is COLON, then advances
+            self.nextToken(); // move to value expression
+
+            const value = try self.parseExpression(0);
+
+            try field_values.append(self.allocator, .{
+                .field_name = field_name,
+                .value = value,
+            });
+
+            if (self.current_token.type == .COMMA) {
+                self.nextToken(); // consume comma
+            }
+        }
+
+        // current_token is already RBRACE from the loop exit
+        self.nextToken(); // consume RBRACE
+
+        const struct_lit = try self.allocator.create(Expr.StructLiteral);
+        struct_lit.* = .{
+            .struct_name = struct_name,
+            .field_values = try field_values.toOwnedSlice(self.allocator),
+        };
+
+        return Expr{ .struct_literal = struct_lit };
+    }
+
     fn parseBlockStatement(self: *Parser) ParseError!Stmt {
         try self.expectToken(.LBRACE);
         const stmts = try self.parseBlock();
@@ -580,9 +686,13 @@ pub const Parser = struct {
                 const name = self.current_token.lexeme;
                 self.nextToken();
 
-                var expr = Expr{ .identifier = name };
+                // Check for struct literal: Identifier { field: value, ... }
+                var expr = if (self.current_token.type == .LBRACE)
+                    try self.parseStructLiteral(name)
+                else
+                    Expr{ .identifier = name };
 
-                // Loop for chaining: arr[0][1], arr.length, arr.push(5), etc.
+                // Loop for chaining: arr[0][1], arr.length, arr.push(5), struct.field, etc.
                 while (true) {
                     if (self.current_token.type == .LBRACKET) {
                         // Index access: arr[index]
