@@ -1,0 +1,40 @@
+struct Point {
+    x: int,
+    y: int
+}
+
+struct Rectangle {
+    topLeft: Point,
+    width: int,
+    height: int
+}
+
+let origin: Point = Point { x: 0, y: 0 };
+let topRight: Point = Point { x: 100, y: 0 };
+
+let rect: Rectangle = Rectangle {
+    topLeft: origin,
+    width: 100,
+    height: 50
+};
+
+let top_x: int = rect.topLeft.x;
+let top_y: int = rect.topLeft.y;
+let w: int = rect.width;
+let h: int = rect.height;
+
+print(top_x);
+print(top_y);
+print(w);
+print(h);
+
+let rect2: Rectangle = Rectangle {
+    topLeft: Point { x: 10, y: 20 },
+    width: 200,
+    height: 150
+};
+
+print(rect2.topLeft.x);
+print(rect2.topLeft.y);
+print(rect2.width);
+print(rect2.height);

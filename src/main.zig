@@ -77,7 +77,7 @@ pub fn main() !void {
 
     // Phase 3: Semantic Analysis
     std.debug.print("Phase 3: Semantic Analysis (Type Checking)\n", .{});
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     analyzer.analyze(&program) catch |err| {

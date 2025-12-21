@@ -17,6 +17,7 @@ Este documento describe la sintaxis completa del lenguaje de programacion Boemia
               | <while_statement>
               | <for_statement>
               | <function_decl>
+              | <struct_decl>
               | <return_statement>
               | <print_statement>
               | <expression_statement>
@@ -38,6 +39,12 @@ Este documento describe la sintaxis completa del lenguaje de programacion Boemia
 <function_decl> ::= "fn" <identifier> "(" <parameters>? ")" ":" <type>
                     "{" <statement>* "}"
 
+<struct_decl> ::= "struct" <identifier> "{" <field_list> "}"
+
+<field_list> ::= <field> ("," <field>)*
+
+<field> ::= <identifier> ":" <type>
+
 <return_statement> ::= "return" <expression>? ";"
 
 <print_statement> ::= "print" "(" <expression> ")" ";"
@@ -50,6 +57,10 @@ Este documento describe la sintaxis completa del lenguaje de programacion Boemia
                | <expression> <binary_op> <expression>
                | <unary_op> <expression>
                | <identifier> "(" <arguments>? ")"
+               | <struct_literal>
+               | <array_literal>
+               | <expression> "[" <expression> "]"
+               | <expression> "." <identifier>
 
 <primary> ::= <integer>
             | <float>
@@ -58,7 +69,19 @@ Este documento describe la sintaxis completa del lenguaje de programacion Boemia
             | <identifier>
             | "(" <expression> ")"
 
+<struct_literal> ::= <identifier> "{" <field_value_list>? "}"
+
+<field_value_list> ::= <field_value> ("," <field_value>)*
+
+<field_value> ::= <identifier> ":" <expression>
+
+<array_literal> ::= "[" <expression_list>? "]"
+
+<expression_list> ::= <expression> ("," <expression>)*
+
 <type> ::= "int" | "float" | "string" | "bool" | "void"
+         | "[" <type> "]"
+         | <identifier>
 
 <binary_op> ::= "+" | "-" | "*" | "/" | "==" | "!=" | "<" | ">" | "<=" | ">="
 
@@ -538,6 +561,201 @@ graph TD
     style F fill:#7ed321
     style K fill:#7ed321
 ```
+
+## Structs
+
+```mermaid
+graph TB
+    A[Structs] --> B[Declaracion]
+    A --> C[Instanciacion]
+    A --> D[Acceso a Campos]
+
+    B --> B1[struct Nombre ...]
+    C --> C1[Nombre { ... }]
+    D --> D1[variable.campo]
+
+    style A fill:#4a90e2
+    style B fill:#7ed321
+    style C fill:#7ed321
+    style D fill:#7ed321
+```
+
+### Declaracion de Structs
+
+```boemia
+struct NombreStruct {
+    campo1: tipo1,
+    campo2: tipo2,
+    campo3: tipo3
+}
+```
+
+**Reglas**:
+- Declarados con la palabra clave `struct`
+- Nombre debe comenzar con may\u00fascula (convención)
+- Campos separados por comas
+- Cada campo tiene nombre y tipo
+- Los structs deben declararse antes de usarse
+
+**Ejemplos**:
+
+```boemia
+struct Point {
+    x: int,
+    y: int
+}
+
+struct Player {
+    name: string,
+    score: int,
+    isActive: bool
+}
+
+struct Vector2D {
+    x: float,
+    y: float
+}
+```
+
+### Instanciacion de Structs
+
+```boemia
+let variable: NombreStruct = NombreStruct {
+    campo1: valor1,
+    campo2: valor2,
+    campo3: valor3
+};
+```
+
+**Reglas**:
+- Se usa el nombre del struct como constructor
+- Todos los campos deben especificarse
+- Valores separados por comas
+- Sintaxis: `campo: valor`
+
+**Ejemplos**:
+
+```boemia
+let p1: Point = Point { x: 10, y: 20 };
+let p2: Point = Point { x: 5, y: 15 };
+
+let player: Player = Player {
+    name: "Alice",
+    score: 100,
+    isActive: true
+};
+
+let vec: Vector2D = Vector2D { x: 1.5, y: 2.3 };
+```
+
+### Acceso a Campos
+
+```boemia
+variable.campo
+```
+
+**Ejemplos**:
+
+```boemia
+let p: Point = Point { x: 10, y: 20 };
+let x_val: int = p.x;  // 10
+let y_val: int = p.y;  // 20
+
+print(p.x);
+print(p.y);
+```
+
+### Structs Anidados
+
+Los structs pueden contener otros structs como campos.
+
+**Declaracion**:
+
+```boemia
+struct Point {
+    x: int,
+    y: int
+}
+
+struct Rectangle {
+    topLeft: Point,
+    width: int,
+    height: int
+}
+```
+
+**Instanciacion con variable existente**:
+
+```boemia
+let origin: Point = Point { x: 0, y: 0 };
+let rect: Rectangle = Rectangle {
+    topLeft: origin,
+    width: 100,
+    height: 50
+};
+```
+
+**Instanciacion con literal anidado**:
+
+```boemia
+let rect2: Rectangle = Rectangle {
+    topLeft: Point { x: 10, y: 20 },
+    width: 200,
+    height: 150
+};
+```
+
+**Acceso anidado**:
+
+```boemia
+let top_x: int = rect.topLeft.x;  // 0
+let top_y: int = rect.topLeft.y;  // 0
+
+print(rect2.topLeft.x);  // 10
+print(rect2.topLeft.y);  // 20
+```
+
+### Arrays de Structs
+
+```boemia
+let puntos: [Point] = [
+    Point { x: 0, y: 0 },
+    Point { x: 10, y: 20 },
+    Point { x: 30, y: 40 }
+];
+
+let primer_punto: Point = puntos[0];
+print(primer_punto.x);  // 0
+```
+
+### Structs con Arrays
+
+```boemia
+struct Team {
+    name: string,
+    members: [string],
+    scores: [int]
+}
+
+let team: Team = Team {
+    name: "Alpha",
+    members: ["Alice", "Bob", "Carlos"],
+    scores: [100, 85, 92]
+};
+
+print(team.members[0]);  // "Alice"
+print(team.scores[0]);   // 100
+```
+
+### Limitaciones Actuales
+
+- No hay métodos en structs (solo datos)
+- No hay herencia
+- No hay constructores especiales
+- Todos los campos son públicos
+- No hay valores por defecto
+
+Ver [Documentación de Structs](27-STRUCTS.md) para más detalles.
 
 ## Sentencia print
 

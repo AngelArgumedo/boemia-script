@@ -15,7 +15,7 @@ test "analyzer: accept valid variable declaration" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     try analyzer.analyze(&program);
@@ -33,7 +33,7 @@ test "analyzer: detect type mismatch in assignment" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     const result = analyzer.analyze(&program);
@@ -52,7 +52,7 @@ test "analyzer: detect undefined variable" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     const result = analyzer.analyze(&program);
@@ -73,7 +73,7 @@ test "analyzer: detect constant reassignment" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     const result = analyzer.analyze(&program);
@@ -94,7 +94,7 @@ test "analyzer: accept variable reassignment" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     try analyzer.analyze(&program);
@@ -115,7 +115,7 @@ test "analyzer: detect type mismatch in reassignment" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     const result = analyzer.analyze(&program);
@@ -133,7 +133,7 @@ test "analyzer: accept arithmetic operations on same types" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     try analyzer.analyze(&program);
@@ -156,7 +156,7 @@ test "analyzer: accept comparison in if condition" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     try analyzer.analyze(&program);
@@ -177,7 +177,7 @@ test "analyzer: detect redeclaration of variable" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     const result = analyzer.analyze(&program);
@@ -195,7 +195,7 @@ test "analyzer: accept string concatenation" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     try analyzer.analyze(&program);
@@ -213,7 +213,7 @@ test "analyzer: accept boolean expressions" {
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     try analyzer.analyze(&program);

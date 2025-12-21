@@ -1,0 +1,15 @@
+struct Point {
+    x: int,
+    y: int
+}
+
+let p1: Point = Point { x: 10, y: 20 };
+let p2: Point = Point { x: 5, y: 15 };
+
+let x_val: int = p1.x;
+let y_val: int = p1.y;
+
+print(x_val);
+print(y_val);
+print(p2.x);
+print(p2.y);

@@ -8,10 +8,22 @@ pub const DataType = union(enum) {
     BOOL,
     VOID,
     ARRAY: *ArrayType,
+    STRUCT: *StructType,
 
     pub const ArrayType = struct {
         element_type: *DataType,
         allocator: std.mem.Allocator,
+    };
+
+    pub const StructType = struct {
+        name: []const u8, // Nombre del struct (ej: "Point")
+        fields: []StructField, // Lista de campos
+        allocator: std.mem.Allocator,
+    };
+
+    pub const StructField = struct {
+        name: []const u8, // Nombre del campo (ej: "x")
+        field_type: *DataType, // Tipo del campo (recursivo)
     };
 
     /// Parse a type string and create DataType
@@ -57,6 +69,9 @@ pub const DataType = union(enum) {
                 defer allocator.free(inner);
                 break :blk try std.fmt.allocPrint(allocator, "[{s}]", .{inner});
             },
+            .STRUCT => |struct_type| blk: {
+                break :blk try allocator.dupe(u8, struct_type.name);
+            },
         };
     }
 
@@ -73,16 +88,29 @@ pub const DataType = union(enum) {
                 defer allocator.free(inner);
                 break :blk try std.fmt.allocPrint(allocator, "Array_{s}", .{inner});
             },
+            .STRUCT => |struct_type| blk: {
+                // Los structs usan su nombre directamente en C
+                break :blk try allocator.dupe(u8, struct_type.name);
+            },
         };
     }
 
-    /// Free memory for array types (recursive)
+    /// Free memory for array and struct types (recursive)
     pub fn deinit(self: *DataType) void {
         switch (self.*) {
             .ARRAY => |arr_type| {
                 arr_type.element_type.deinit();
                 arr_type.allocator.destroy(arr_type.element_type);
                 arr_type.allocator.destroy(arr_type);
+            },
+            .STRUCT => |struct_type| {
+                // Liberar cada campo
+                for (struct_type.fields) |field| {
+                    field.field_type.deinit();
+                    struct_type.allocator.destroy(field.field_type);
+                }
+                struct_type.allocator.free(struct_type.fields);
+                struct_type.allocator.destroy(struct_type);
             },
             else => {},
         }
@@ -103,6 +131,7 @@ pub const Expr = union(enum) {
     index_access: *IndexAccess,
     member_access: *MemberAccess,
     method_call: *MethodCall,
+    struct_literal: *StructLiteral,
 
     pub const BinaryExpr = struct {
         left: Expr,
@@ -139,6 +168,16 @@ pub const Expr = union(enum) {
         object: Expr,
         method: []const u8,
         args: []Expr,
+    };
+
+    pub const StructLiteral = struct {
+        struct_name: []const u8, // Nombre del struct (ej: "Point")
+        field_values: []FieldValue, // Lista de pares (campo, valor)
+    };
+
+    pub const FieldValue = struct {
+        field_name: []const u8, // Nombre del campo (ej: "x")
+        value: Expr, // Expresion del valor
     };
 
     pub fn deinit(self: *Expr, allocator: std.mem.Allocator) void {
@@ -188,6 +227,13 @@ pub const Expr = union(enum) {
                 allocator.free(meth.args);
                 allocator.destroy(meth);
             },
+            .struct_literal => |struct_lit| {
+                for (struct_lit.field_values) |*field_val| {
+                    field_val.value.deinit(allocator);
+                }
+                allocator.free(struct_lit.field_values);
+                allocator.destroy(struct_lit);
+            },
             else => {},
         }
     }
@@ -226,6 +272,7 @@ pub const Stmt = union(enum) {
     print_stmt: Expr,
     block: []Stmt,
     function_decl: *FunctionDecl,
+    struct_decl: *StructDecl,
 
     pub const VariableDecl = struct {
         name: []const u8,
@@ -278,6 +325,11 @@ pub const Stmt = union(enum) {
     pub const Parameter = struct {
         name: []const u8,
         data_type: DataType,
+    };
+
+    pub const StructDecl = struct {
+        name: []const u8, // Nombre del struct (ej: "Point")
+        fields: []DataType.StructField, // Lista de campos con sus tipos
     };
 
     pub fn deinit(self: *Stmt, allocator: std.mem.Allocator) void {
@@ -371,6 +423,15 @@ pub const Stmt = union(enum) {
                 }
                 allocator.free(func.body);
                 allocator.destroy(func);
+            },
+            .struct_decl => |struct_d| {
+                // Liberar cada campo
+                for (struct_d.fields) |field| {
+                    field.field_type.deinit();
+                    allocator.destroy(field.field_type);
+                }
+                allocator.free(struct_d.fields);
+                allocator.destroy(struct_d);
             },
         }
     }

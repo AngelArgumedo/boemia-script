@@ -16,38 +16,48 @@ pub const CodeGenError = error{
 
 pub const CodeGenerator = struct {
     allocator: std.mem.Allocator,
+    arena: *std.heap.ArenaAllocator,
     output: std.ArrayList(u8),
     indent_level: usize,
     string_literals: std.ArrayList([]const u8),
     variable_types: std.StringHashMap(DataType),
     array_types_seen: std.StringHashMap(DataType),
+    struct_types_seen: std.StringHashMap(DataType.StructType),
     temp_counter: usize,
     array_variables: std.ArrayList([]const u8),
 
-    pub fn init(allocator: std.mem.Allocator) CodeGenerator {
+    pub fn init(allocator: std.mem.Allocator) !CodeGenerator {
+        const arena = try allocator.create(std.heap.ArenaAllocator);
+        arena.* = std.heap.ArenaAllocator.init(allocator);
+        const arena_alloc = arena.allocator();
+
         return CodeGenerator{
-            .allocator = allocator,
+            .allocator = arena_alloc,
+            .arena = arena,
             .output = .empty,
             .indent_level = 0,
             .string_literals = .empty,
-            .variable_types = std.StringHashMap(DataType).init(allocator),
-            .array_types_seen = std.StringHashMap(DataType).init(allocator),
+            .variable_types = std.StringHashMap(DataType).init(arena_alloc),
+            .array_types_seen = std.StringHashMap(DataType).init(arena_alloc),
+            .struct_types_seen = std.StringHashMap(DataType.StructType).init(arena_alloc),
             .temp_counter = 0,
             .array_variables = .empty,
         };
     }
 
     pub fn deinit(self: *CodeGenerator) void {
-        self.output.deinit(self.allocator);
-        self.string_literals.deinit(self.allocator);
-        self.variable_types.deinit();
-        self.array_types_seen.deinit();
-        self.array_variables.deinit(self.allocator);
+        const backing_allocator = self.arena.child_allocator;
+        self.arena.deinit();
+        backing_allocator.destroy(self.arena);
+        // Everything else is freed by arena.deinit()
     }
 
     pub fn generate(self: *CodeGenerator, program: *Program) ![]const u8 {
         // Generate C headers
         try self.writeHeaders();
+
+        // Generate struct typedef definitions
+        try self.writeStructTypedefs(program);
 
         // Generate array struct definitions and helper functions
         try self.writeArrayStructDefinitions(program);
@@ -198,6 +208,9 @@ pub const CodeGenerator = struct {
                     try self.collectArrayTypesFromStmt(s);
                 }
             },
+            .struct_decl => {
+                // Structs don't contain arrays in their declaration
+            },
         }
     }
 
@@ -234,6 +247,11 @@ pub const CodeGenerator = struct {
                     try self.collectArrayTypesFromExpr(arg);
                 }
             },
+            .struct_literal => |struct_lit| {
+                for (struct_lit.field_values) |field_val| {
+                    try self.collectArrayTypesFromExpr(&field_val.value);
+                }
+            },
         }
     }
 
@@ -245,6 +263,7 @@ pub const CodeGenerator = struct {
             .BOOL => try std.fmt.allocPrint(self.allocator, "bool", .{}),
             .VOID => try std.fmt.allocPrint(self.allocator, "void", .{}),
             .ARRAY => try data_type.toCName(self.allocator),
+            .STRUCT => |struct_type| try self.allocator.dupe(u8, struct_type.name),
         };
     }
 
@@ -352,6 +371,42 @@ pub const CodeGenerator = struct {
         switch (data_type) {
             .ARRAY => |arr_type| return 1 + getArrayDepth(arr_type.element_type.*),
             else => return 0,
+        }
+    }
+
+    fn writeStructTypedefs(self: *CodeGenerator, program: *Program) !void {
+        // Generar typedef para cada struct en el orden del programa
+        for (program.statements) |*stmt| {
+            if (stmt.* == .struct_decl) {
+                const struct_decl = stmt.struct_decl;
+
+                // Registrar en struct_types_seen
+                const struct_type = DataType.StructType{
+                    .name = struct_decl.name,
+                    .fields = struct_decl.fields,
+                    .allocator = self.allocator,
+                };
+                try self.struct_types_seen.put(struct_decl.name, struct_type);
+
+                // Generar typedef inmediatamente
+                try self.write("typedef struct {\n");
+                self.indent_level += 1;
+
+                // Generar cada campo
+                for (struct_decl.fields) |field| {
+                    try self.writeIndent();
+                    const field_type_c = try self.mapTypeToC(field.field_type.*);
+                    try self.write(field_type_c);
+                    try self.write(" ");
+                    try self.write(field.name);
+                    try self.write(";\n");
+                }
+
+                self.indent_level -= 1;
+                try self.write("} ");
+                try self.write(struct_decl.name);
+                try self.write(";\n\n");
+            }
         }
     }
 
@@ -517,6 +572,35 @@ pub const CodeGenerator = struct {
                             try self.write(");\n");
                         }
                     }
+
+                    return;
+                }
+
+                // Special handling for structs with struct literals
+                if (decl.data_type == .STRUCT and decl.value == .struct_literal) {
+                    const struct_lit = decl.value.struct_literal;
+
+                    // Write type and name
+                    if (decl.is_const) {
+                        try self.write("const ");
+                    }
+                    const type_c = try self.mapTypeToC(decl.data_type);
+                    defer self.allocator.free(type_c);
+                    try self.write(type_c);
+                    try self.write(" ");
+                    try self.write(decl.name);
+                    try self.write(" = ");
+
+                    // Generate designated initializer: { .x = 10, .y = 20 }
+                    try self.write("{");
+                    for (struct_lit.field_values, 0..) |field_val, i| {
+                        if (i > 0) try self.write(", ");
+                        try self.write(".");
+                        try self.write(field_val.field_name);
+                        try self.write(" = ");
+                        try self.generateExpr(&field_val.value);
+                    }
+                    try self.write("};\n");
 
                     return;
                 }
@@ -711,6 +795,10 @@ pub const CodeGenerator = struct {
                 try self.writeIndent();
                 try self.write("}\n");
             },
+            .struct_decl => |struct_decl| {
+                // Struct declarations are handled in writeStructTypedefs, skip in main body
+                _ = struct_decl;
+            },
             .function_decl => |func| {
                 // Function declarations go before main, so we skip them in main body
                 // In a full implementation, we'd collect these and generate them separately
@@ -808,13 +896,23 @@ pub const CodeGenerator = struct {
                 try self.write("]");
             },
             .member_access => |mem| {
-                // Only .length is supported
-                if (std.mem.eql(u8, mem.member, "length")) {
-                    try self.generateExpr(&mem.object);
-                    try self.write(".length");
-                } else {
-                    return CodeGenError.UnsupportedOperation;
+                // Arrays: .length
+                // Structs: .field
+                try self.generateExpr(&mem.object);
+                try self.write(".");
+                try self.write(mem.member);
+            },
+            .struct_literal => |struct_lit| {
+                // Generate designated initializer: { .field1 = val1, .field2 = val2 }
+                try self.write("{");
+                for (struct_lit.field_values, 0..) |field_val, i| {
+                    if (i > 0) try self.write(", ");
+                    try self.write(".");
+                    try self.write(field_val.field_name);
+                    try self.write(" = ");
+                    try self.generateExpr(&field_val.value);
                 }
+                try self.write("}");
             },
             .method_call => |meth| {
                 // Only .push() is supported
@@ -917,6 +1015,10 @@ pub const CodeGenerator = struct {
                             // TODO: Implement array printing in Phase 5
                             try self.write("\"%s\\n\", \"[array]\"");
                         },
+                        .STRUCT => {
+                            // TODO: Implement struct printing
+                            try self.write("\"%s\\n\", \"[struct]\"");
+                        },
                     }
                 } else {
                     // Fallback: assume integer if we don't know the type
@@ -943,6 +1045,7 @@ pub const CodeGenerator = struct {
             .BOOL => "bool",
             .VOID => "void",
             .ARRAY => "void*", // TODO: Implement proper array types in Phase 5
+            .STRUCT => |struct_type| struct_type.name,
         };
     }
 
@@ -1012,11 +1115,11 @@ pub fn compileToExecutable(
     output_path: []const u8,
 ) !void {
     // Generate C code
-    var codegen = CodeGenerator.init(allocator);
+    var codegen = try CodeGenerator.init(allocator);
     defer codegen.deinit();
 
     const c_code = try codegen.generate(program);
-    defer allocator.free(c_code);
+    // c_code is allocated by arena, will be freed with codegen.deinit()
 
     // Create build directory if it doesn't exist
     std.fs.cwd().makeDir("build") catch |err| {
