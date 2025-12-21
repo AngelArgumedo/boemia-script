@@ -22,14 +22,19 @@ pub const Parser = struct {
     current_token: Token,
     peek_token: Token,
     allocator: std.mem.Allocator,
+    arena: *std.heap.ArenaAllocator,
     errors: std.ArrayList([]const u8),
 
     pub fn init(allocator: std.mem.Allocator, lexer: *Lexer) !Parser {
+        const arena = try allocator.create(std.heap.ArenaAllocator);
+        arena.* = std.heap.ArenaAllocator.init(allocator);
+
         var parser = Parser{
             .lexer = lexer,
             .current_token = undefined,
             .peek_token = undefined,
-            .allocator = allocator,
+            .allocator = arena.allocator(),
+            .arena = arena,
             .errors = .empty,
         };
         parser.nextToken();
@@ -38,7 +43,9 @@ pub const Parser = struct {
     }
 
     pub fn deinit(self: *Parser) void {
-        self.errors.deinit(self.allocator);
+        const backing_allocator = self.arena.child_allocator;
+        self.arena.deinit();
+        backing_allocator.destroy(self.arena);
     }
 
     fn nextToken(self: *Parser) void {
@@ -85,9 +92,11 @@ pub const Parser = struct {
 
             // Create DataType.ARRAY
             const elem_type_ptr = try self.allocator.create(DataType);
+            errdefer self.allocator.destroy(elem_type_ptr);
             elem_type_ptr.* = element_type;
 
             const array_type = try self.allocator.create(DataType.ArrayType);
+            errdefer self.allocator.destroy(array_type);
             array_type.* = .{
                 .element_type = elem_type_ptr,
                 .allocator = self.allocator,
@@ -106,6 +115,7 @@ pub const Parser = struct {
         if (self.peek_token.type == .IDENTIFIER) {
             // Assume it's a struct type - validation happens in analyzer
             const struct_type_ptr = try self.allocator.create(DataType.StructType);
+            errdefer self.allocator.destroy(struct_type_ptr);
             struct_type_ptr.* = .{
                 .name = self.peek_token.lexeme,
                 .fields = &[_]DataType.StructField{}, // Empty, will be filled by analyzer
@@ -265,6 +275,7 @@ pub const Parser = struct {
         }
 
         const if_stmt = try self.allocator.create(Stmt.IfStmt);
+        errdefer self.allocator.destroy(if_stmt);
         if_stmt.* = .{
             .condition = condition,
             .then_block = then_block,
@@ -287,6 +298,7 @@ pub const Parser = struct {
         const body = try self.parseBlock();
 
         const while_stmt = try self.allocator.create(Stmt.WhileStmt);
+        errdefer self.allocator.destroy(while_stmt);
         while_stmt.* = .{
             .condition = condition,
             .body = body,
@@ -302,6 +314,7 @@ pub const Parser = struct {
 
         // Parse init - special case for variable declaration without 'make'
         const init_stmt = try self.allocator.create(Stmt);
+        errdefer self.allocator.destroy(init_stmt);
         if (self.current_token.type == .IDENTIFIER and self.peek_token.type == .COLON) {
             // Variable declaration in for loop: i: int = 0;
             const name = self.current_token.lexeme;
@@ -346,6 +359,7 @@ pub const Parser = struct {
 
         // Parse update (assignment without semicolon)
         const update_stmt = try self.allocator.create(Stmt);
+        errdefer self.allocator.destroy(update_stmt);
         const update_name = self.current_token.lexeme;
         self.nextToken(); // consume identifier
         self.nextToken(); // consume '='
@@ -363,6 +377,7 @@ pub const Parser = struct {
         const body = try self.parseBlock();
 
         const for_stmt = try self.allocator.create(Stmt.ForStmt);
+        errdefer self.allocator.destroy(for_stmt);
         for_stmt.* = .{
             .init = init_stmt,
             .condition = condition,
@@ -402,6 +417,7 @@ pub const Parser = struct {
         const body = try self.parseBlock();
 
         const for_in_stmt = try self.allocator.create(Stmt.ForInStmt);
+        errdefer self.allocator.destroy(for_in_stmt);
         for_in_stmt.* = .{
             .iterator = iterator,
             .iterator_type = null, // Will be filled in by analyzer
@@ -429,6 +445,7 @@ pub const Parser = struct {
         self.nextToken(); // consume SEMICOLON
 
         const ret_stmt = try self.allocator.create(Stmt.ReturnStmt);
+        errdefer self.allocator.destroy(ret_stmt);
         ret_stmt.* = .{ .value = value };
 
         return Stmt{ .return_stmt = ret_stmt };
@@ -502,6 +519,7 @@ pub const Parser = struct {
         const body = try self.parseBlock();
 
         const func_decl = try self.allocator.create(Stmt.FunctionDecl);
+        errdefer self.allocator.destroy(func_decl);
         func_decl.* = .{
             .name = name,
             .params = try params.toOwnedSlice(self.allocator),
@@ -541,6 +559,7 @@ pub const Parser = struct {
 
             // Allocar el tipo del campo
             const field_type_ptr = try self.allocator.create(DataType);
+            errdefer self.allocator.destroy(field_type_ptr);
             field_type_ptr.* = field_type_value;
 
             try fields.append(self.allocator, .{
@@ -557,6 +576,7 @@ pub const Parser = struct {
         self.nextToken(); // consume RBRACE
 
         const struct_decl = try self.allocator.create(Stmt.StructDecl);
+        errdefer self.allocator.destroy(struct_decl);
         struct_decl.* = .{
             .name = name,
             .fields = try fields.toOwnedSlice(self.allocator),
@@ -597,6 +617,7 @@ pub const Parser = struct {
         self.nextToken(); // consume RBRACE
 
         const struct_lit = try self.allocator.create(Expr.StructLiteral);
+        errdefer self.allocator.destroy(struct_lit);
         struct_lit.* = .{
             .struct_name = struct_name,
             .field_values = try field_values.toOwnedSlice(self.allocator),
@@ -646,6 +667,7 @@ pub const Parser = struct {
             const right = try self.parseExpression(precedence + 1);
 
             const binary = try self.allocator.create(Expr.BinaryExpr);
+            errdefer self.allocator.destroy(binary);
             binary.* = .{
                 .left = left,
                 .operator = op,
@@ -686,11 +708,10 @@ pub const Parser = struct {
                 const name = self.current_token.lexeme;
                 self.nextToken();
 
-                // Check for struct literal: Identifier { field: value, ... }
-                var expr = if (self.current_token.type == .LBRACE)
-                    try self.parseStructLiteral(name)
-                else
-                    Expr{ .identifier = name };
+                // Don't try to parse struct literals in expression context
+                // Struct literals should only appear in assignments/declarations
+                // This avoids ambiguity with "identifier {" in for-in loops
+                var expr = Expr{ .identifier = name };
 
                 // Loop for chaining: arr[0][1], arr.length, arr.push(5), struct.field, etc.
                 while (true) {
@@ -711,6 +732,7 @@ pub const Parser = struct {
                         self.nextToken(); // consume ']'
 
                         const idx_access = try self.allocator.create(Expr.IndexAccess);
+                        errdefer self.allocator.destroy(idx_access);
                         idx_access.* = .{ .array = expr, .index = index };
                         expr = Expr{ .index_access = idx_access };
                     } else if (self.current_token.type == .DOT) {
@@ -747,6 +769,7 @@ pub const Parser = struct {
                             self.nextToken(); // consume ')'
 
                             const meth_call = try self.allocator.create(Expr.MethodCall);
+                            errdefer self.allocator.destroy(meth_call);
                             meth_call.* = .{
                                 .object = expr,
                                 .method = member_name,
@@ -756,6 +779,7 @@ pub const Parser = struct {
                         } else {
                             // Property access: arr.length
                             const mem_access = try self.allocator.create(Expr.MemberAccess);
+                            errdefer self.allocator.destroy(mem_access);
                             mem_access.* = .{ .object = expr, .member = member_name };
                             expr = Expr{ .member_access = mem_access };
                         }
@@ -790,6 +814,7 @@ pub const Parser = struct {
                         };
 
                         const call = try self.allocator.create(Expr.CallExpr);
+                        errdefer self.allocator.destroy(call);
                         call.* = .{
                             .name = func_name,
                             .args = try args.toOwnedSlice(self.allocator),
@@ -819,6 +844,7 @@ pub const Parser = struct {
                 if (self.current_token.type == .RBRACKET) {
                     self.nextToken(); // consume ']'
                     const arr_lit = try self.allocator.create(Expr.ArrayLiteral);
+                    errdefer self.allocator.destroy(arr_lit);
                     arr_lit.* = .{
                         .elements = try elements.toOwnedSlice(self.allocator),
                         .element_type = null,
@@ -852,6 +878,7 @@ pub const Parser = struct {
                 }
 
                 const arr_lit = try self.allocator.create(Expr.ArrayLiteral);
+                errdefer self.allocator.destroy(arr_lit);
                 arr_lit.* = .{
                     .elements = try elements.toOwnedSlice(self.allocator),
                     .element_type = null,
@@ -862,6 +889,7 @@ pub const Parser = struct {
                 self.nextToken();
                 const operand = try self.parsePrimary();
                 const unary = try self.allocator.create(Expr.UnaryExpr);
+                errdefer self.allocator.destroy(unary);
                 unary.* = .{
                     .operator = .NEG,
                     .operand = operand,

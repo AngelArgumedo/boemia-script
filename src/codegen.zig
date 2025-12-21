@@ -16,6 +16,7 @@ pub const CodeGenError = error{
 
 pub const CodeGenerator = struct {
     allocator: std.mem.Allocator,
+    arena: *std.heap.ArenaAllocator,
     output: std.ArrayList(u8),
     indent_level: usize,
     string_literals: std.ArrayList([]const u8),
@@ -25,27 +26,30 @@ pub const CodeGenerator = struct {
     temp_counter: usize,
     array_variables: std.ArrayList([]const u8),
 
-    pub fn init(allocator: std.mem.Allocator) CodeGenerator {
+    pub fn init(allocator: std.mem.Allocator) !CodeGenerator {
+        const arena = try allocator.create(std.heap.ArenaAllocator);
+        arena.* = std.heap.ArenaAllocator.init(allocator);
+        const arena_alloc = arena.allocator();
+
         return CodeGenerator{
-            .allocator = allocator,
+            .allocator = arena_alloc,
+            .arena = arena,
             .output = .empty,
             .indent_level = 0,
             .string_literals = .empty,
-            .variable_types = std.StringHashMap(DataType).init(allocator),
-            .array_types_seen = std.StringHashMap(DataType).init(allocator),
-            .struct_types_seen = std.StringHashMap(DataType.StructType).init(allocator),
+            .variable_types = std.StringHashMap(DataType).init(arena_alloc),
+            .array_types_seen = std.StringHashMap(DataType).init(arena_alloc),
+            .struct_types_seen = std.StringHashMap(DataType.StructType).init(arena_alloc),
             .temp_counter = 0,
             .array_variables = .empty,
         };
     }
 
     pub fn deinit(self: *CodeGenerator) void {
-        self.output.deinit(self.allocator);
-        self.string_literals.deinit(self.allocator);
-        self.variable_types.deinit();
-        self.array_types_seen.deinit();
-        self.struct_types_seen.deinit();
-        self.array_variables.deinit(self.allocator);
+        const backing_allocator = self.arena.child_allocator;
+        self.arena.deinit();
+        backing_allocator.destroy(self.arena);
+        // Everything else is freed by arena.deinit()
     }
 
     pub fn generate(self: *CodeGenerator, program: *Program) ![]const u8 {
@@ -1111,11 +1115,11 @@ pub fn compileToExecutable(
     output_path: []const u8,
 ) !void {
     // Generate C code
-    var codegen = CodeGenerator.init(allocator);
+    var codegen = try CodeGenerator.init(allocator);
     defer codegen.deinit();
 
     const c_code = try codegen.generate(program);
-    defer allocator.free(c_code);
+    // c_code is allocated by arena, will be freed with codegen.deinit()
 
     // Create build directory if it doesn't exist
     std.fs.cwd().makeDir("build") catch |err| {

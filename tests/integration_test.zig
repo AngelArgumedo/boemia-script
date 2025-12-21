@@ -13,16 +13,18 @@ fn compileAndCheckOutput(allocator: std.mem.Allocator, source: []const u8) ![]co
     var program = try parser.parseProgram();
     defer program.deinit();
 
-    var analyzer = Analyzer.init(allocator);
+    var analyzer = try Analyzer.init(allocator);
     defer analyzer.deinit();
 
     try analyzer.analyze(&program);
 
-    var code_generator = codegen.CodeGenerator.init(allocator);
+    var code_generator = try codegen.CodeGenerator.init(allocator);
     defer code_generator.deinit();
 
     const c_code = try code_generator.generate(&program);
-    return c_code;
+    // Make a copy since c_code will be freed when code_generator.deinit() is called
+    const c_code_copy = try allocator.dupe(u8, c_code);
+    return c_code_copy;
 }
 
 test "integration: compile simple integer variable" {

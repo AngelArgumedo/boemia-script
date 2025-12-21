@@ -27,46 +27,32 @@ const FunctionSignature = struct {
 
 pub const Analyzer = struct {
     allocator: std.mem.Allocator,
+    arena: *std.heap.ArenaAllocator,
     symbol_table: std.StringHashMap(Symbol),
     function_table: std.StringHashMap(FunctionSignature),
     struct_table: std.StringHashMap(DataType.StructType),
     errors: std.ArrayList([]const u8),
 
-    pub fn init(allocator: std.mem.Allocator) Analyzer {
+    pub fn init(allocator: std.mem.Allocator) !Analyzer {
+        const arena = try allocator.create(std.heap.ArenaAllocator);
+        arena.* = std.heap.ArenaAllocator.init(allocator);
+        const arena_alloc = arena.allocator();
+
         return Analyzer{
-            .allocator = allocator,
-            .symbol_table = std.StringHashMap(Symbol).init(allocator),
-            .function_table = std.StringHashMap(FunctionSignature).init(allocator),
-            .struct_table = std.StringHashMap(DataType.StructType).init(allocator),
+            .allocator = arena_alloc,
+            .arena = arena,
+            .symbol_table = std.StringHashMap(Symbol).init(arena_alloc),
+            .function_table = std.StringHashMap(FunctionSignature).init(arena_alloc),
+            .struct_table = std.StringHashMap(DataType.StructType).init(arena_alloc),
             .errors = .empty,
         };
     }
 
     pub fn deinit(self: *Analyzer) void {
-        self.symbol_table.deinit();
-
-        // Free function signatures
-        var it = self.function_table.iterator();
-        while (it.next()) |entry| {
-            self.allocator.free(entry.value_ptr.param_types);
-        }
-        self.function_table.deinit();
-
-        // Free struct types
-        var struct_it = self.struct_table.iterator();
-        while (struct_it.next()) |entry| {
-            for (entry.value_ptr.fields) |field| {
-                field.field_type.deinit();
-                self.allocator.destroy(field.field_type);
-            }
-            self.allocator.free(entry.value_ptr.fields);
-        }
-        self.struct_table.deinit();
-
-        for (self.errors.items) |err| {
-            self.allocator.free(err);
-        }
-        self.errors.deinit(self.allocator);
+        const backing_allocator = self.arena.child_allocator;
+        self.arena.deinit();
+        backing_allocator.destroy(self.arena);
+        // Everything else is freed by arena.deinit()
     }
 
     fn resolveStructType(self: *Analyzer, data_type: DataType) AnalyzerError!DataType {
@@ -75,6 +61,7 @@ pub const Analyzer = struct {
                 // Look up the struct in the struct_table to get full definition
                 if (self.struct_table.get(struct_type.name)) |full_struct| {
                     const resolved_ptr = try self.allocator.create(DataType.StructType);
+                    errdefer self.allocator.destroy(resolved_ptr);
                     resolved_ptr.* = full_struct;
                     return DataType{ .STRUCT = resolved_ptr };
                 } else {
@@ -592,9 +579,11 @@ pub const Analyzer = struct {
 
                 // Crear tipo [T]
                 const elem_type_ptr = try self.allocator.create(DataType);
+                errdefer self.allocator.destroy(elem_type_ptr);
                 elem_type_ptr.* = first_type;
 
                 const array_type = try self.allocator.create(DataType.ArrayType);
+                errdefer self.allocator.destroy(array_type);
                 array_type.* = .{
                     .element_type = elem_type_ptr,
                     .allocator = self.allocator,
@@ -819,6 +808,7 @@ pub const Analyzer = struct {
 
                 // Retornar tipo struct
                 const struct_type_ptr = try self.allocator.create(DataType.StructType);
+                errdefer self.allocator.destroy(struct_type_ptr);
                 struct_type_ptr.* = struct_type;
 
                 break :blk DataType{ .STRUCT = struct_type_ptr };
